@@ -42,4 +42,8 @@ numpy
 matplotlib
 seaborn
 
+# Note: GitHub CLI (gh) is installed as a system dependency in setup.sh
+
+
+
 
