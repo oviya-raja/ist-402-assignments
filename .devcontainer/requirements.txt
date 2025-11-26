@@ -1,0 +1,45 @@
+# IST402 - AI Agents & RAG Systems Course Requirements
+# Python packages for assignments
+
+# Core ML/AI libraries
+transformers
+torch
+sentence-transformers
+faiss-cpu
+
+# LangChain framework
+langchain
+langchain-community
+
+# Web and deployment
+streamlit
+pyngrok
+
+# Document processing
+pypdf
+pillow
+
+# Multimodal AI
+diffusers
+accelerate
+soundfile
+
+# LlamaIndex and OpenAI
+llama-index
+llama-index-llms-openai
+llama-index-embeddings-openai
+nest-asyncio
+openai
+
+# Jupyter for notebooks
+jupyter
+jupyterlab
+ipykernel
+
+# Data science
+pandas
+numpy
+matplotlib
+seaborn
+
+
