@@ -40,6 +40,28 @@ ist-402-assignments/
 
 ## 🚀 Quick Start (30 minutes)
 
+### Option A: DevContainer (Recommended)
+
+**Use VS Code Dev Containers or GitHub Codespaces for a pre-configured environment:**
+
+1. **VS Code:**
+   - Install [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+   - Open command palette (Cmd/Ctrl + Shift + P)
+   - Select "Dev Containers: Reopen in Container"
+
+2. **GitHub Codespaces:**
+   - Click "Code" → "Codespaces" → "Create codespace"
+
+The devcontainer includes:
+- ✅ Python 3.11 with all required packages
+- ✅ Node.js 20 for Docusaurus
+- ✅ Jupyter Lab for notebooks
+- ✅ All dependencies pre-installed
+
+See [`.devcontainer/README.md`](./.devcontainer/README.md) for details.
+
+### Option B: Local Setup
+
 ### 1. Set Up Accounts
 - **Hugging Face**: https://huggingface.co/join → Get token at https://huggingface.co/settings/tokens
 - **Google Colab**: https://colab.research.google.com (free GPU access)
@@ -47,12 +69,21 @@ ist-402-assignments/
 - **ngrok**: https://dashboard.ngrok.com (for Week 8, free tier works)
 
 ### 2. Install Packages
+
+**Option A: Using requirements.txt (Recommended)**
+```bash
+pip install -r requirements.txt
+```
+
+**Option B: Install individually (Google Colab)**
 Open Google Colab and run:
 ```python
 !pip install transformers torch sentence-transformers faiss-cpu langchain langchain-community
 !pip install streamlit pyngrok pypdf pillow diffusers accelerate soundfile
 !pip install llama-index llama-index-llms-openai llama-index-embeddings-openai nest-asyncio openai
 ```
+
+**Note:** The `requirements.txt` file is automatically installed in the devcontainer.
 
 ### 3. Test Setup
 ```python

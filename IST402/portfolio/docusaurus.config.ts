@@ -5,7 +5,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  title: 'IST402 Portfolio',
+  title: 'Portfolio',
   tagline: 'AI Agents & RAG Systems - Demonstrating Understanding Through Bloom\'s Taxonomy',
   favicon: 'img/favicon.ico',
 
@@ -59,9 +59,9 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: 'IST402 Portfolio',
+      title: 'Portfolio',
       logo: {
-        alt: 'IST402 Portfolio Logo',
+        alt: 'Portfolio Logo',
         src: 'img/logo.svg',
       },
       items: [
