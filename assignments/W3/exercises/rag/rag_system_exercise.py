@@ -157,6 +157,7 @@ QA_MODELS = [
     # Expected: Good accuracy, slower speed, no confidence scores
     # Use case: Comparison - shows why explicit QA models are better for QA tasks
     # Note: Mistral is great for text generation but not optimized for QA
+    # ⚠️ WARNING: 7B model requires GPU or 16GB+ RAM - may fail on CPU
     "mistralai/Mistral-7B-Instruct-v0.3",
 ]
 
@@ -900,35 +901,44 @@ def evaluate_qa_model(
                     "success": True,
                     "model_type": "explicit_qa"  # Explicit QA model
                 }
-            except (ValueError, OSError):
-                # Fallback: Try as text generation model (for general models like Qwen)
+            except (ValueError, OSError, RuntimeError) as e:
+                # Fallback: Try as text generation model (for general models like Qwen/Mistral)
                 # This shows why explicit QA models are better - they work directly!
-                gen_pipeline = pipeline(
-                    "text-generation",
-                    model=model_id,
-                    token=hf_token,
-                    max_new_tokens=50
-                )
-                load_time = time.time() - start_time
-                
-                # Create prompt for general model
-                prompt = f"Context: {context}\nQuestion: {question}\nAnswer:"
-                start_time = time.time()
-                result = gen_pipeline(prompt, return_full_text=False)
-                inference_time = time.time() - start_time
-                
-                answer = result[0]["generated_text"].strip()
-                
-                return {
-                    "model_id": model_id,
-                    "answer": answer,
-                    "score": 0.5,  # No confidence score available (general model limitation)
-                    "load_time": load_time,
-                    "inference_time": inference_time,
-                    "success": True,
-                    "model_type": "general"  # General model (not QA-specific)
-                }
+                try:
+                    gen_pipeline = pipeline(
+                        "text-generation",
+                        model=model_id,
+                        token=hf_token,
+                        max_new_tokens=50,
+                        device_map="auto" if torch.cuda.is_available() else None
+                    )
+                    load_time = time.time() - start_time
+                    
+                    # Create prompt for general model
+                    prompt = f"Context: {context}\nQuestion: {question}\nAnswer:"
+                    start_time = time.time()
+                    result = gen_pipeline(prompt, return_full_text=False)
+                    inference_time = time.time() - start_time
+                    
+                    answer = result[0]["generated_text"].strip()
+                    
+                    return {
+                        "model_id": model_id,
+                        "answer": answer,
+                        "score": 0.5,  # No confidence score available (general model limitation)
+                        "load_time": load_time,
+                        "inference_time": inference_time,
+                        "success": True,
+                        "model_type": "general"  # General model (not QA-specific)
+                    }
+                except Exception as gen_error:
+                    # Text generation also failed - likely model too large for CPU
+                    raise Exception(f"Text generation failed: {str(gen_error)}. Model may be too large for CPU. Try GPU or use a smaller model.")
     except Exception as e:
+        # Extract error message (truncate if too long)
+        error_msg = str(e)
+        if len(error_msg) > 150:
+            error_msg = error_msg[:147] + "..."
         return {
             "model_id": model_id,
             "answer": "",
@@ -936,7 +946,7 @@ def evaluate_qa_model(
             "load_time": 0.0,
             "inference_time": 0.0,
             "success": False,
-            "error": str(e),
+            "error": error_msg,
             "model_type": "unknown"
         }
 
@@ -1034,7 +1044,14 @@ def rank_qa_models(
         if result["success"]:
             print(f"✅ Score: {result['score']:.3f} | Time: {result['inference_time']:.2f}s")
         else:
-            print(f"❌ Failed")
+            error_msg = result.get("error", "Unknown error")
+            # Show helpful error message for students
+            if "too large" in error_msg.lower() or "out of memory" in error_msg.lower():
+                print(f"❌ Failed: Model too large for CPU (needs GPU or smaller model)")
+            else:
+                # Truncate long error messages
+                short_error = error_msg[:60] + "..." if len(error_msg) > 60 else error_msg
+                print(f"❌ Failed: {short_error}")
         print()
     
     # Rank models by composite score (score * 0.6 + speed_score * 0.4)
