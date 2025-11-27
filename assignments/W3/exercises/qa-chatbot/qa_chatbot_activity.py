@@ -20,26 +20,24 @@ The system:
 import sys
 import os
 import warnings
+import csv
 from typing import List, Tuple, Any, Dict
 
-# Suppress verbose warnings for cleaner output
-warnings.filterwarnings("ignore", category=UserWarning)
-warnings.filterwarnings("ignore", message=".*weights.*not initialized.*")
-warnings.filterwarnings("ignore", message=".*You should probably TRAIN.*")
-os.environ["TRANSFORMERS_VERBOSITY"] = "error"
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 # Import required libraries
 try:
     from transformers import pipeline
     from langchain_community.vectorstores import FAISS
-    from langchain_community.embeddings import HuggingFaceEmbeddings
-    from langchain.docstore.document import Document
+    from langchain_core.documents import Document
+    # Use the new langchain-huggingface package (fixes deprecation warning)
+    from langchain_huggingface import HuggingFaceEmbeddings
     print("✅ All required libraries imported successfully!")
 except ImportError as e:
     print("❌ Required packages not installed!")
-    print("   Install with: pip install transformers langchain langchain-community sentence-transformers faiss-cpu torch")
+    print("   Install with: pip install transformers langchain langchain-community langchain-core langchain-huggingface sentence-transformers faiss-cpu torch")
     print(f"   Error: {e}")
+    print("\n   Note: langchain-huggingface is required to avoid deprecation warnings.")
+    print("   Install it with: pip install langchain-huggingface")
     sys.exit(1)
 
 
@@ -57,10 +55,50 @@ SIMILARITY_SEARCH_K = 2  # Number of top documents to retrieve
 # STEP 1: SETUP KNOWLEDGE BASE
 # ============================================================================
 
-def create_faq_data() -> List[Tuple[str, str]]:
+def load_faq_from_csv(csv_file: str = "faq_data.csv") -> List[Tuple[str, str]]:
+    """
+    Load FAQ data from a CSV file.
+    
+    CSV Format:
+        question,answer
+        "What is Python?","Python is a high-level programming language..."
+        "What is machine learning?","Machine learning is a subset of AI..."
+    
+    Args:
+        csv_file: Path to the CSV file (default: "faq_data.csv" in same directory)
+    
+    Returns:
+        List of (question, answer) tuples
+    """
+    faq_data = []
+    csv_path = os.path.join(os.path.dirname(__file__), csv_file)
+    
+    try:
+        with open(csv_path, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                question = row.get('question', '').strip()
+                answer = row.get('answer', '').strip()
+                if question and answer:
+                    faq_data.append((question, answer))
+        return faq_data
+    except FileNotFoundError:
+        print(f"   ⚠️  CSV file not found: {csv_file}")
+        print(f"   💡 Creating default FAQ data instead...")
+        return None
+    except Exception as e:
+        print(f"   ⚠️  Error reading CSV file: {e}")
+        print(f"   💡 Creating default FAQ data instead...")
+        return None
+
+
+def create_faq_data(csv_file: str = "faq_data.csv") -> List[Tuple[str, str]]:
     """
     Create a simple knowledge base with question-answer pairs.
-    This is like creating a mini-encyclopedia for our chatbot.
+    Loads from CSV file if available, otherwise uses default hardcoded data.
+    
+    Args:
+        csv_file: Path to CSV file (default: "faq_data.csv")
     
     Returns:
         List of (question, answer) tuples
@@ -68,18 +106,30 @@ def create_faq_data() -> List[Tuple[str, str]]:
     print("=" * 60)
     print("STEP 1: Setting Up Knowledge Base")
     print("=" * 60)
-    print("\n📚 Creating FAQ knowledge base...")
+    print(f"\n📚 Loading FAQ knowledge base from: {csv_file}...")
     
-    faq_data = [
-        ("What is Python?", "Python is a high-level programming language known for its simplicity and readability."),
-        ("What is machine learning?", "Machine learning is a subset of AI that enables computers to learn without being explicitly programmed."),
-        ("What is a chatbot?", "A chatbot is a computer program designed to simulate conversation with human users."),
-        ("What is the return policy?", "30 days return with full refund."),
-        ("What are your store hours?", "We are open 9am–9pm, Mon–Sat."),
-        ("Do you ship internationally?", "Yes, we ship worldwide, including Australia.")
-    ]
+    # Try to load from CSV first
+    faq_data = load_faq_from_csv(csv_file)
     
-    print(f"✅ Created {len(faq_data)} FAQ pairs\n")
+    # If CSV loading failed, use default data
+    if faq_data is None or len(faq_data) == 0:
+        faq_data = [
+            ("What is Python?", "Python is a high-level programming language known for its simplicity and readability."),
+            ("What is machine learning?", "Machine learning is a subset of AI that enables computers to learn without being explicitly programmed."),
+            ("What is a chatbot?", "A chatbot is a computer program designed to simulate conversation with human users."),
+            ("What is the return policy?", "30 days return with full refund."),
+            ("What are your store hours?", "We are open 9am–9pm, Mon–Sat."),
+            ("Do you ship internationally?", "Yes, we ship worldwide, including Australia.")
+        ]
+        print(f"   📝 Using default FAQ data ({len(faq_data)} pairs)")
+    else:
+        print(f"   ✅ Loaded {len(faq_data)} FAQ pairs from CSV")
+    
+    print(f"\n✅ Created {len(faq_data)} FAQ pairs")
+    print("   💡 Note: Can be automated using prompts to generate the pairs")
+    print("      Reference: ../rag/rag_system_exercise.py -> generate_qa_database() (line ~386)")
+    print("      This function uses Mistral to generate Q&A pairs via prompts")
+    print(f"   💡 Tip: Edit {csv_file} to customize your FAQ knowledge base\n")
     return faq_data
 
 
@@ -129,6 +179,7 @@ def create_embeddings_model() -> HuggingFaceEmbeddings:
     print(f"\n📚 Loading embedding model: {EMBEDDING_MODEL_ID}")
     print("   This converts text to numerical vectors for similarity search...")
     
+    # Use the new langchain-huggingface package (no deprecation warning)
     embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL_ID)
     
     print("✅ Embedding model loaded!\n")
@@ -255,11 +306,18 @@ def test_rag_system(
     print("=" * 60)
     print("STEP 7: Testing RAG System")
     print("=" * 60)
-    print(f"\n📊 Confidence threshold: {confidence_threshold}")
-    print(f"📊 Retrieving top {k} documents per question")
-    print("\n--- Week 2 Chatbot Response ---\n")
+    print("\n📊 Configuration:")
+    print(f"   • Confidence threshold: {confidence_threshold}")
+    print(f"   • Documents retrieved per question: {k}")
+    print("\n" + "─" * 60)
+    print("🤖 CHATBOT RESPONSES")
+    print("─" * 60 + "\n")
     
-    for q in questions:
+    for i, q in enumerate(questions, 1):
+        print(f"\n{'='*60}")
+        print(f"Question {i}/{len(questions)}")
+        print(f"{'='*60}")
+        
         # STEP 1: FIND RELEVANT INFORMATION
         # Use FAISS similarity search to find the k most relevant FAQ documents
         # 'db' is our FAISS vector database containing embedded FAQ data
@@ -276,7 +334,8 @@ def test_rag_system(
         # Pass both the user's question AND the retrieved context to the QA pipeline
         # The model will use the context to generate a more accurate, grounded answer
         # This is the "Augmented" part of Retrieval-Augmented Generation (RAG)
-        result = qa_pipeline({"question": q, "context": context})
+        # Using keyword arguments to avoid FutureWarning
+        result = qa_pipeline(question=q, context=context)
         
         # STEP 4: CONFIDENCE-BASED ANSWER SELECTION
         # Check if the model is confident enough in its answer (score > threshold)
@@ -287,13 +346,23 @@ def test_rag_system(
         # STEP 5: DISPLAY RESULTS
         # Format and print the question-answer pair for easy reading
         # Also show confidence score for educational purposes
-        print(f"Q: {q}")
-        print(f"A: {answer}")
-        if result["score"] > confidence_threshold:
-            print(f"   (Confidence: {result['score']:.3f})")
+        print(f"❓ User Question:")
+        print(f"   {q}\n")
+        print(f"💬 Bot Response:")
+        print(f"   {answer}\n")
+        
+        # Show confidence and interpretation
+        confidence = result["score"]
+        if confidence > confidence_threshold:
+            print(f"📈 Confidence Score: {confidence:.3f} (✓ Above threshold)")
         else:
-            print(f"   (Confidence too low: {result['score']:.3f} < {confidence_threshold})")
-        print()
+            print(f"📉 Confidence Score: {confidence:.3f} (✗ Below threshold of {confidence_threshold})")
+        
+        # Show retrieved context (truncated for readability)
+        print(f"\n📚 Retrieved Context (top {k} documents):")
+        for j, doc in enumerate(docs, 1):
+            content_preview = doc.page_content[:100] + "..." if len(doc.page_content) > 100 else doc.page_content
+            print(f"   {j}. {content_preview}")
 
 
 # ============================================================================
@@ -339,10 +408,24 @@ def main() -> None:
         # Step 7: Test RAG system
         test_rag_system(questions, db, qa_pipeline)
         
+        print("\n" + "=" * 60)
+        print("✅ QA CHATBOT ACTIVITY COMPLETED!")
         print("=" * 60)
-        print("✅ QA Chatbot Activity Completed!")
-        print("=" * 60)
-        print()
+        print("\n📝 Summary:")
+        print("   • Knowledge base: 6 FAQ pairs")
+        print("   • Vector database: FAISS with embeddings")
+        print("   • QA model: DistilBERT (fast & efficient)")
+        print("   • Test questions: 5 questions evaluated")
+        print("\n💡 Key Concepts Learned:")
+        print("   1. RAG = Retrieval-Augmented Generation")
+        print("   2. Embeddings convert text to numerical vectors")
+        print("   3. FAISS enables fast similarity search")
+        print("   4. Confidence scores help filter unreliable answers")
+        print("\n🎓 This demonstrates how modern chatbots use:")
+        print("   • Vector databases for knowledge retrieval")
+        print("   • Pre-trained models for answer generation")
+        print("   • Confidence thresholds for quality control")
+        print("=" * 60 + "\n")
     
     except KeyboardInterrupt:
         print("\n\n⚠️  Interrupted by user")
