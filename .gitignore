@@ -38,10 +38,12 @@ wheels/
 .installed.cfg
 *.egg
 .env
+.env.local
 .venv
 env/
 venv/
 ENV/
+IST402/.venv/
 
 # Node.js
 node_modules/

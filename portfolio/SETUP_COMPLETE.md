@@ -14,7 +14,7 @@ Your portfolio site is ready! Here's what has been set up:
 
 ### 1. Install Dependencies (if not done)
 ```bash
-cd ist402-portfolio
+cd portfolio
 npm install
 ```
 
@@ -38,10 +38,10 @@ After completing each assignment:
 
 ## 📝 Quick Reference
 
-- **Portfolio Location:** `ist402-portfolio/`
-- **Documentation:** `ist402-portfolio/docs/`
-- **Homepage:** `ist402-portfolio/src/pages/index.tsx`
-- **Config:** `ist402-portfolio/docusaurus.config.ts`
+- **Portfolio Location:** `portfolio/`
+- **Documentation:** `portfolio/docs/`
+- **Homepage:** `portfolio/src/pages/index.tsx`
+- **Config:** `portfolio/docusaurus.config.ts`
 
 ## 🎯 Remember
 

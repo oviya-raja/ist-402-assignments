@@ -1,0 +1,203 @@
+# IST402 - AI Agents & RAG Systems Course Requirements
+# Python packages for all assignments (W3, W8, W9, W10, W11)
+# Install with: pip install -r requirements.txt
+
+# ============================================================================
+# CORE ML/AI LIBRARIES (Used across multiple weeks)
+# ============================================================================
+
+# transformers>=4.35.0
+# Week: W3, W8, W9, W10
+# Purpose: Hugging Face Transformers library for pre-trained models (Mistral, BLIP, Whisper, etc.)
+# Used for: Loading and using language models, vision models, and audio models
+
+# torch>=2.1.0
+# Week: W3, W8, W9, W10
+# Purpose: PyTorch deep learning framework - backend for all ML models
+# Used for: Model inference, GPU acceleration, tensor operations
+
+# sentence-transformers>=2.2.0
+# Week: W3, W8, W9, W10
+# Purpose: Generate text embeddings for semantic similarity search
+# Used for: Creating vector embeddings for RAG systems, FAISS indexing
+
+# faiss-cpu>=1.7.4
+# Week: W3, W8, W9, W10
+# Purpose: Facebook AI Similarity Search - efficient vector database
+# Used for: Fast similarity search in RAG systems, storing and querying embeddings
+# Storage: By default stores indices in RAM (memory). Can be saved to disk using
+#          faiss.write_index(index, "index.faiss") and loaded with faiss.read_index("index.faiss")
+
+# ============================================================================
+# WEEK 3: PROMPT ENGINEERING & QA APPLICATIONS
+# ============================================================================
+
+# python-dotenv>=1.0.0
+# Week: W3
+# Purpose: Load environment variables from .env files
+# Used for: Securely storing Hugging Face API tokens
+
+# accelerate>=0.25.0
+# Week: W3, W8
+# Purpose: Accelerate model loading and inference
+# Used for: Optimizing model performance, memory management
+
+# ============================================================================
+# WEEK 8: MULTIMODAL AI APPLICATIONS
+# ============================================================================
+
+# streamlit>=1.28.0
+# Week: W8
+# Purpose: Build interactive web applications for AI demos
+# Used for: Creating web interfaces for image captioning, PDF Q&A, speech-to-image
+
+# pyngrok>=5.0.0
+# Week: W8
+# Purpose: Expose local Streamlit apps to the internet via ngrok tunnels
+# Used for: Sharing Streamlit apps publicly without deployment
+
+# pypdf>=3.17.0
+# Week: W8
+# Purpose: Extract text from PDF documents
+# Used for: PDF Q&A project - processing PDF files for RAG systems
+
+# pillow>=10.0.0
+# Week: W8
+# Purpose: Python Imaging Library for image processing
+# Used for: Image captioning project - loading and processing images
+
+# diffusers>=0.24.0
+# Week: W8
+# Purpose: Hugging Face Diffusers library for generative models
+# Used for: Speech-to-Image project - Stable Diffusion for text-to-image generation
+
+# soundfile>=0.12.0
+# Week: W8
+# Purpose: Read and write audio files
+# Used for: Speech-to-Image project - processing audio files with Whisper
+
+# ============================================================================
+# WEEK 9 & 10: BUILDING AGENTIC RAG WITH LLAMAINDEX
+# ============================================================================
+
+# llama-index>=0.9.0
+# Week: W9, W10
+# Purpose: LlamaIndex framework for building RAG applications
+# Used for: Query routing, tool calling, agent reasoning, multi-document agents
+
+# llama-index-llms-openai>=0.1.0
+# Week: W9, W10
+# Purpose: OpenAI LLM integration for LlamaIndex
+# Used for: Using GPT-3.5/GPT-4 with LlamaIndex agents
+
+# llama-index-embeddings-openai>=0.1.0
+# Week: W9, W10
+# Purpose: OpenAI embeddings integration for LlamaIndex
+# Used for: Generating embeddings using OpenAI's embedding models
+
+# nest-asyncio>=1.5.0
+# Week: W9, W10
+# Purpose: Enable nested event loops in Jupyter notebooks
+# Used for: Running async LlamaIndex code in Jupyter environments
+
+# openai>=1.0.0
+# Week: W9, W10
+# Purpose: Official OpenAI Python SDK
+# Used for: Direct API calls to OpenAI models (GPT-3.5, GPT-4, embeddings)
+
+# ============================================================================
+# LANGCHAIN FRAMEWORK (Used in multiple weeks)
+# ============================================================================
+
+# langchain>=0.1.0
+# Week: W3, W8, W9, W10
+# Purpose: LangChain framework for building LLM applications
+# Used for: Chain composition, prompt templates, memory management
+
+# langchain-community>=0.0.20
+# Week: W3, W8
+# Purpose: Community integrations for LangChain (FAISS, etc.)
+# Used for: FAISS vector store integration with LangChain
+
+# ============================================================================
+# JUPYTER & DEVELOPMENT TOOLS
+# ============================================================================
+
+# jupyter>=1.0.0
+# Week: All
+# Purpose: Jupyter notebook environment
+# Used for: Running and editing notebooks for all assignments
+
+# jupyterlab>=4.0.0
+# Week: All
+# Purpose: Enhanced Jupyter Lab interface
+# Used for: Better notebook development experience
+
+# ipykernel>=6.25.0
+# Week: All
+# Purpose: Jupyter kernel for Python
+# Used for: Running Python code in Jupyter notebooks
+
+# ============================================================================
+# DATA SCIENCE & UTILITIES
+# ============================================================================
+
+# pandas>=2.0.0
+# Week: W3, W8, W9, W10
+# Purpose: Data manipulation and analysis
+# Used for: Processing datasets, organizing Q&A pairs, data analysis
+
+# numpy>=1.24.0
+# Week: W3, W8, W9, W10
+# Purpose: Numerical computing library
+# Used for: Array operations, numerical computations (required by many ML libraries)
+
+# matplotlib>=3.7.0
+# Week: W3, W8, W9, W10
+# Purpose: Plotting and visualization
+# Used for: Creating charts, visualizing results, performance metrics
+
+# seaborn>=0.12.0
+# Week: W3, W8, W9, W10
+# Purpose: Statistical data visualization
+# Used for: Enhanced plotting, model comparison visualizations
+
+# sentencepiece>=0.1.99
+# Week: W3, W8
+# Purpose: Text tokenization library
+# Used for: Tokenizing text for language models (used by some transformers)
+
+# ============================================================================
+# INSTALLATION
+# ============================================================================
+# Run: pip install -r requirements.txt
+# Or use the setup script: ./setup.sh
+
+transformers>=4.35.0
+torch>=2.1.0
+sentence-transformers>=2.2.0
+faiss-cpu>=1.7.4
+langchain>=0.1.0
+langchain-community>=0.0.20
+streamlit>=1.28.0
+pyngrok>=5.0.0
+pypdf>=3.17.0
+pillow>=10.0.0
+diffusers>=0.24.0
+accelerate>=0.25.0
+soundfile>=0.12.0
+llama-index>=0.9.0
+llama-index-llms-openai>=0.1.0
+llama-index-embeddings-openai>=0.1.0
+nest-asyncio>=1.5.0
+openai>=1.0.0
+jupyter>=1.0.0
+jupyterlab>=4.0.0
+ipykernel>=6.25.0
+pandas>=2.0.0
+numpy>=1.24.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+python-dotenv>=1.0.0
+sentencepiece>=0.1.99
+

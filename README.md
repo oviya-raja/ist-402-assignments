@@ -7,19 +7,20 @@ Complete guide for **IST402: AI Agents, Retrieval-Augmented Generation (RAG), an
 ```
 ist-402-assignments/
 ├── README.md                    # This file - Course overview
-├── IST402/
-│   ├── assignments/             # Assignment files and notebooks
-│   │   ├── W3/                  # Week 3: Prompt Engineering & QA
-│   │   ├── W6-AI Agents-n8n...  # Week 6: AI Agents with n8n
-│   │   ├── W7GroupAssignment... # Week 7: Group Assignment
-│   │   ├── W8/                  # Week 8: Multimodal AI Applications
-│   │   ├── W9/                  # Week 9: Building Agentic RAG
-│   │   ├── W10/                 # Week 10: Advanced Agentic RAG
-│   │   └── W11_L1.ps, W11_L2.pdf # Week 11: Advanced Topics
-│   └── portfolio/               # Docusaurus portfolio website
-│       ├── docs/                # Portfolio documentation
-│       ├── src/                 # Portfolio source code
-│       └── package.json         # Portfolio dependencies
+├── requirements.txt             # Python dependencies
+├── setup.sh                     # Virtual environment setup script
+├── assignments/                 # Assignment files and notebooks
+│   ├── W3/                      # Week 3: Prompt Engineering & QA
+│   ├── W6-AI Agents-n8n...      # Week 6: AI Agents with n8n
+│   ├── W7GroupAssignment...     # Week 7: Group Assignment
+│   ├── W8/                      # Week 8: Multimodal AI Applications
+│   ├── W9/                      # Week 9: Building Agentic RAG
+│   ├── W10/                     # Week 10: Advanced Agentic RAG
+│   └── W11_L1.ps, W11_L2.pdf   # Week 11: Advanced Topics
+└── portfolio/                   # Docusaurus portfolio website
+    ├── docs/                    # Portfolio documentation
+    ├── src/                     # Portfolio source code
+    └── package.json             # Portfolio dependencies
 ```
 
 ## 📑 Table of Contents
@@ -60,6 +61,32 @@ The devcontainer includes:
 
 See [`.devcontainer/README.md`](./.devcontainer/README.md) for details.
 
+### Local Python Environment Setup
+
+**Recommended: Root-level virtual environment**
+
+All assignments share the same dependencies, so use ONE virtual environment at the root level.
+
+**Quick setup with uv (fastest):**
+```bash
+uv venv
+source .venv/bin/activate
+uv pip install -r requirements.txt
+```
+
+**Or with standard venv:**
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+**Or use the setup script (easiest):**
+```bash
+./setup.sh
+```
+
 ---
 
 ## 📅 Recommended Learning Path
@@ -78,8 +105,8 @@ See [`.devcontainer/README.md`](./.devcontainer/README.md) for details.
 ## 📖 Week-by-Week Guide (Chronological Order)
 
 ### **Week 3: Prompt Engineering & QA**
-**Location:** [`IST402/assignments/W3/`](./IST402/assignments/W3/)  
-**Portfolio:** [`IST402/portfolio/docs/week3-prompt-engineering/`](./IST402/portfolio/docs/week3-prompt-engineering/)
+**Location:** [`assignments/W3/`](./assignments/W3/)  
+**Portfolio:** [`portfolio/docs/week3-prompt-engineering/`](./portfolio/docs/week3-prompt-engineering/)
 
 **Files:**
 - `W3__Prompt_Engineering w_QA Applications-2.ipynb`
@@ -105,8 +132,8 @@ See [`.devcontainer/README.md`](./.devcontainer/README.md) for details.
 ---
 
 ### **Week 6: AI Agents with n8n** (Optional)
-**Location:** [`IST402/assignments/`](./IST402/assignments/)  
-**Portfolio:** [`IST402/portfolio/docs/week6-ai-agents-n8n/`](./IST402/portfolio/docs/week6-ai-agents-n8n/)
+**Location:** [`assignments/`](./assignments/)  
+**Portfolio:** [`portfolio/docs/week6-ai-agents-n8n/`](./portfolio/docs/week6-ai-agents-n8n/)
 
 **Files:** `W6-AI Agents-n8n to-do-task.pptx`
 
@@ -118,8 +145,8 @@ See [`.devcontainer/README.md`](./.devcontainer/README.md) for details.
 ---
 
 ### **Week 7: Group Assignment**
-**Location:** [`IST402/assignments/`](./IST402/assignments/)  
-**Portfolio:** [`IST402/portfolio/docs/week7-group-assignment/`](./IST402/portfolio/docs/week7-group-assignment/)
+**Location:** [`assignments/`](./assignments/)  
+**Portfolio:** [`portfolio/docs/week7-group-assignment/`](./portfolio/docs/week7-group-assignment/)
 
 **Files:** `W7GroupAssignmentAgentsDevwithOpenAI.pdf`
 
@@ -131,8 +158,8 @@ See [`.devcontainer/README.md`](./.devcontainer/README.md) for details.
 ---
 
 ### **Week 8: Multimodal AI Applications**
-**Location:** [`IST402/assignments/W8/`](./IST402/assignments/W8/)  
-**Portfolio:** [`IST402/portfolio/docs/week8-multimodal/`](./IST402/portfolio/docs/week8-multimodal/)
+**Location:** [`assignments/W8/`](./assignments/W8/)  
+**Portfolio:** [`portfolio/docs/week8-multimodal/`](./portfolio/docs/week8-multimodal/)
 
 **Files:** `W8_image_caption.ipynb`, `W8_pdf_Q&A.ipynb`, `W8_Speech_to_Image.ipynb`
 
@@ -158,8 +185,8 @@ See [`.devcontainer/README.md`](./.devcontainer/README.md) for details.
 ---
 
 ### **Week 9: Building Agentic RAG with LlamaIndex**
-**Location:** [`IST402/assignments/W9/`](./IST402/assignments/W9/)  
-**Portfolio:** [`IST402/portfolio/docs/week9-llamaindex/`](./IST402/portfolio/docs/week9-llamaindex/)
+**Location:** [`assignments/W9/`](./assignments/W9/)  
+**Portfolio:** [`portfolio/docs/week9-llamaindex/`](./portfolio/docs/week9-llamaindex/)
 
 **Files:** `W9_Building_Agentic_RAG_LlamaIndex_3_4.ipynb`
 
@@ -177,8 +204,8 @@ See [`.devcontainer/README.md`](./.devcontainer/README.md) for details.
 ---
 
 ### **Week 10: Advanced Agentic RAG**
-**Location:** [`IST402/assignments/W10/`](./IST402/assignments/W10/)  
-**Portfolio:** [`IST402/portfolio/docs/week10-advanced-rag/`](./IST402/portfolio/docs/week10-advanced-rag/)
+**Location:** [`assignments/W10/`](./assignments/W10/)  
+**Portfolio:** [`portfolio/docs/week10-advanced-rag/`](./portfolio/docs/week10-advanced-rag/)
 
 **Files:** `W10_Building_Agentic_RAG_LlamaIndex_3_4.ipynb`
 
@@ -193,8 +220,8 @@ See [`.devcontainer/README.md`](./.devcontainer/README.md) for details.
 ---
 
 ### **Week 11: Advanced Topics**
-**Location:** [`IST402/assignments/`](./IST402/assignments/)  
-**Portfolio:** [`IST402/portfolio/docs/week11-advanced-topics/`](./IST402/portfolio/docs/week11-advanced-topics/)
+**Location:** [`assignments/`](./assignments/)  
+**Portfolio:** [`portfolio/docs/week11-advanced-topics/`](./portfolio/docs/week11-advanced-topics/)
 
 **Files:** `W11_L1.ps`, `W11_L2.pdf`
 
@@ -206,26 +233,26 @@ See [`.devcontainer/README.md`](./.devcontainer/README.md) for details.
 
 ## 📂 Assignments
 
-All assignment files are located in [`IST402/assignments/`](./IST402/assignments/):
+All assignment files are located in [`assignments/`](./assignments/):
 
-- **Week 3:** [`W3/`](./IST402/assignments/W3/) - Prompt Engineering & QA notebooks
-- **Week 6:** [`W6-AI Agents-n8n to-do-task.pptx`](./IST402/assignments/W6-AI%20Agents-n8n%20to-do-task.pptx) - n8n workflow presentation
-- **Week 7:** [`W7GroupAssignmentAgentsDevwithOpenAI.pdf`](./IST402/assignments/W7GroupAssignmentAgentsDevwithOpenAI.pdf) - Group assignment PDF
-- **Week 8:** [`W8/`](./IST402/assignments/W8/) - Multimodal AI notebooks (3 projects)
-- **Week 9:** [`W9/`](./IST402/assignments/W9/) - LlamaIndex notebooks
-- **Week 10:** [`W10/`](./IST402/assignments/W10/) - Advanced RAG notebooks
-- **Week 11:** [`W11_L1.ps`](./IST402/assignments/W11_L1.ps), [`W11_L2.pdf`](./IST402/assignments/W11_L2.pdf) - Advanced topics
+- **Week 3:** [`W3/`](./assignments/W3/) - Prompt Engineering & QA notebooks
+- **Week 6:** [`W6-AI Agents-n8n to-do-task.pptx`](./assignments/W6-AI%20Agents-n8n%20to-do-task.pptx) - n8n workflow presentation
+- **Week 7:** [`W7GroupAssignmentAgentsDevwithOpenAI.pdf`](./assignments/W7GroupAssignmentAgentsDevwithOpenAI.pdf) - Group assignment PDF
+- **Week 8:** [`W8/`](./assignments/W8/) - Multimodal AI notebooks (3 projects)
+- **Week 9:** [`W9/`](./assignments/W9/) - LlamaIndex notebooks
+- **Week 10:** [`W10/`](./assignments/W10/) - Advanced RAG notebooks
+- **Week 11:** [`W11_L1.ps`](./assignments/W11_L1.ps), [`W11_L2.pdf`](./assignments/W11_L2.pdf) - Advanced topics
 
 ---
 
 ## 🎨 Portfolio
 
-Your portfolio website is located in [`IST402/portfolio/`](./IST402/portfolio/).
+Your portfolio website is located in [`portfolio/`](./portfolio/).
 
 ### View Your Portfolio
 
 ```bash
-cd IST402/portfolio
+cd portfolio
 npm install
 npm start
 ```
@@ -234,10 +261,10 @@ Visit `http://localhost:3000` to see your portfolio.
 
 ### Portfolio Structure
 
-- **Documentation:** [`IST402/portfolio/docs/`](./IST402/portfolio/docs/) - All portfolio pages
-- **Week 3:** [`IST402/portfolio/docs/week3-prompt-engineering/`](./IST402/portfolio/docs/week3-prompt-engineering/)
-- **Week 8:** [`IST402/portfolio/docs/week8-multimodal/`](./IST402/portfolio/docs/week8-multimodal/)
-- **Week 9:** [`IST402/portfolio/docs/week9-llamaindex/`](./IST402/portfolio/docs/week9-llamaindex/)
+- **Documentation:** [`portfolio/docs/`](./portfolio/docs/) - All portfolio pages
+- **Week 3:** [`portfolio/docs/week3-prompt-engineering/`](./portfolio/docs/week3-prompt-engineering/)
+- **Week 8:** [`portfolio/docs/week8-multimodal/`](./portfolio/docs/week8-multimodal/)
+- **Week 9:** [`portfolio/docs/week9-llamaindex/`](./portfolio/docs/week9-llamaindex/)
 - And more...
 
 ### Portfolio Features

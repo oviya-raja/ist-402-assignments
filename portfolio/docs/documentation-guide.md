@@ -237,7 +237,7 @@ If your assignment files are in the parent directory:
 ```markdown
 **Reference:** See [`../../assignments/W3/W3__Prompt_Engineering w_QA Applications-2.ipynb`](../../../assignments/W3/W3__Prompt_Engineering%20w_QA%20Applications-2.ipynb)
 
-**Note:** From portfolio docs, use `../../assignments/` to reference assignment files. The portfolio is at `IST402/portfolio/` and assignments are at `IST402/assignments/`.
+**Note:** From portfolio docs, use `../../assignments/` to reference assignment files. The portfolio is at `portfolio/` and assignments are at `assignments/`.
 ```
 
 ### Option 2: File Name with Location
@@ -249,7 +249,7 @@ If files are in a known location:
 - `W3__Prompt_Engineering w_QA Applications-2.ipynb`
 - `W3__QA_Chatbot_Activity_w_Prompt_Engineering (1).ipynb`
 
-**Location:** [`IST402/assignments/W3/`](../../../assignments/W3/) directory (relative to project root)
+**Location:** [`assignments/W3/`](../../../assignments/W3/) directory (relative to project root)
 ```
 
 ### Option 3: Link to GitHub (If Published)
@@ -257,7 +257,7 @@ If files are in a known location:
 If your code is on GitHub:
 
 ```markdown
-**Reference:** [View Notebook on GitHub](https://github.com/oviya-raja/ist-402-assignments/blob/main/IST402/assignments/W3/W3__Prompt_Engineering%20w_QA%20Applications-2.ipynb)
+**Reference:** [View Notebook on GitHub](https://github.com/oviya-raja/ist-402-assignments/blob/main/assignments/W3/W3__Prompt_Engineering%20w_QA%20Applications-2.ipynb)
 ```
 
 ### Option 4: Google Colab Link
@@ -349,7 +349,7 @@ When you're ready to document, copy this template:
 - `[filename].ipynb` - [Description]
 - `[filename].pdf` - [Description]
 
-**Location:** [`IST402/assignments/WX/`](../../../assignments/) directory (relative to project root)
+**Location:** [`assignments/WX/`](../../../assignments/) directory (relative to project root)
 ```
 
 ---

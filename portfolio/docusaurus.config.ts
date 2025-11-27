@@ -42,7 +42,7 @@ const config: Config = {
         docs: {
           sidebarPath: './sidebars.ts',
           // Enable edit links - edit files directly on GitHub
-          editUrl: 'https://github.com/oviya-raja/ist-402-assignments/tree/main/IST402/portfolio/',
+          editUrl: 'https://github.com/oviya-raja/ist-402-assignments/tree/main/portfolio/',
         },
         blog: false,
         theme: {
