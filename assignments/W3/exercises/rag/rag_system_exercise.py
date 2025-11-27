@@ -343,9 +343,13 @@ IMPORTANT: Generate exactly 12-15 pairs. Make questions realistic and answers de
         
         start_time = time.time()
         with torch.no_grad():
-            # Temporarily increase max_new_tokens for Q&A generation
-            original_max_tokens = chatbot.task_specific_params.get("max_new_tokens", 512)
-            result = chatbot(messages, max_new_tokens=1024)  # More tokens for longer output
+            # Use longer generation for Q&A pairs (override pipeline's max_new_tokens)
+            result = chatbot(
+                messages,
+                max_new_tokens=1024,  # More tokens for longer output (10-15 Q&A pairs)
+                do_sample=True,
+                top_k=10
+            )
         generation_time = time.time() - start_time
         
         # Extract response
