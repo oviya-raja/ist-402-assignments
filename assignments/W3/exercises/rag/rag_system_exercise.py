@@ -241,53 +241,37 @@ Always be courteous and aim to help customers understand how {business_name} can
 # STEP 2: GENERATE Q&A DATABASE
 # ============================================================================
 
-def parse_qa_pairs(text: str) -> List[Dict[str, str]]:
+def parse_qa_json(response_text: str) -> List[Dict[str, str]]:
     """
-    Parse Q&A pairs from generated text.
+    Parse Q&A pairs from JSON response.
     
-    Handles multiple formats:
-    - Q: question / A: answer
-    - Q. question / A. answer
-    - Numbered lists with Q/A
+    KISS Principle: Simple JSON parsing instead of complex text parsing.
     """
-    qa_pairs = []
-    lines = text.split('\n')
-    
-    current_q = None
-    current_a = None
-    
-    for line in lines:
-        line = line.strip()
-        # Skip empty lines
-        if not line:
-            continue
-            
-        # Check for question markers
-        if re.match(r'^Q[\.:]?\s+', line, re.IGNORECASE) or re.match(r'^\d+[\.\)]\s*Q[\.:]?\s+', line, re.IGNORECASE):
-            # Save previous pair if exists
-            if current_q and current_a:
-                qa_pairs.append({"question": current_q.strip(), "answer": current_a.strip()})
-            # Extract question (remove Q: or Q. prefix)
-            current_q = re.sub(r'^\d+[\.\)]\s*', '', line, flags=re.IGNORECASE)
-            current_q = re.sub(r'^Q[\.:]?\s+', '', current_q, flags=re.IGNORECASE).strip()
-            current_a = None
-        # Check for answer markers
-        elif re.match(r'^A[\.:]?\s+', line, re.IGNORECASE) or re.match(r'^\d+[\.\)]\s*A[\.:]?\s+', line, re.IGNORECASE):
-            # Extract answer (remove A: or A. prefix)
-            current_a = re.sub(r'^\d+[\.\)]\s*', '', line, flags=re.IGNORECASE)
-            current_a = re.sub(r'^A[\.:]?\s+', '', current_a, flags=re.IGNORECASE).strip()
-        # Continue answer if we're in answer mode
-        elif current_a is not None and not re.match(r'^Q[\.:]?\s+', line, re.IGNORECASE):
-            current_a += " " + line
-        # Continue question if we're in question mode (before answer)
-        elif current_q is not None and current_a is None and not re.match(r'^A[\.:]?\s+', line, re.IGNORECASE):
-            current_q += " " + line
-    
-    # Add last pair
-    if current_q and current_a:
-        qa_pairs.append({"question": current_q.strip(), "answer": current_a.strip()})
-    
-    return qa_pairs
+    try:
+        # Try to extract JSON from response (might have markdown code blocks)
+        response_text = response_text.strip()
+        
+        # Remove markdown code blocks if present
+        if "```json" in response_text:
+            response_text = response_text.split("```json")[1].split("```")[0].strip()
+        elif "```" in response_text:
+            response_text = response_text.split("```")[1].split("```")[0].strip()
+        
+        # Parse JSON
+        data = json.loads(response_text)
+        
+        # Handle different JSON structures
+        if isinstance(data, list):
+            return data
+        elif isinstance(data, dict) and "qa_pairs" in data:
+            return data["qa_pairs"]
+        elif isinstance(data, dict) and "questions" in data:
+            return data["questions"]
+        else:
+            return []
+    except json.JSONDecodeError:
+        # Fallback: return empty list if JSON parsing fails
+        return []
 
 
 def generate_qa_database(chatbot: Any, system_prompt: str, business_name: str, max_retries: int = 2) -> List[Dict[str, str]]:
@@ -309,24 +293,23 @@ def generate_qa_database(chatbot: Any, system_prompt: str, business_name: str, m
     print("\n📚 Asking Mistral to generate 10-15 Q&A pairs...")
     print("   This may take 30-60 seconds...\n")
     
-    # More explicit prompt with clear formatting requirements
-    prompt = f"""You are a customer service representative for {business_name}. Generate EXACTLY 12-15 realistic question-answer pairs that customers frequently ask.
+    # KISS Principle: Request JSON format directly - no parsing needed!
+    prompt = f"""Generate 12-15 realistic question-answer pairs for {business_name} customers.
 
 REQUIREMENTS:
-- Generate at least 12 pairs, ideally 15 pairs
-- Cover ALL these topics: services, pricing, processes, technical details, contact information
-- Use EXACT format for each pair:
-  Q: [the customer's question]
-  A: [your detailed answer]
+- Generate 12-15 pairs
+- Cover: services, pricing, processes, technical details, contact information
+- Return ONLY valid JSON format (no other text)
 
-EXAMPLE FORMAT:
-Q: What services does {business_name} offer?
-A: {business_name} offers comprehensive solutions including...
+JSON FORMAT:
+{{
+  "qa_pairs": [
+    {{"question": "What services do you offer?", "answer": "We offer..."}},
+    {{"question": "How much does it cost?", "answer": "Our pricing..."}}
+  ]
+}}
 
-Q: How much do your services cost?
-A: Our pricing varies based on...
-
-IMPORTANT: Generate exactly 12-15 pairs. Make questions realistic and answers detailed and helpful."""
+Return ONLY the JSON, nothing else."""
 
     qa_database = []
     attempts = 0
@@ -355,8 +338,8 @@ IMPORTANT: Generate exactly 12-15 pairs. Make questions realistic and answers de
         # Extract response
         response_text = result[0]["generated_text"][-1]["content"]
         
-        # Parse Q&A pairs
-        qa_database = parse_qa_pairs(response_text)
+        # Parse Q&A pairs from JSON (KISS: simple JSON parsing)
+        qa_database = parse_qa_json(response_text)
         
         print(f"   Attempt {attempts}: Generated {len(qa_database)} Q&A pairs in {generation_time:.2f} seconds")
         
