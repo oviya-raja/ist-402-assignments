@@ -595,6 +595,25 @@ def build_faiss_index(embeddings: np.ndarray) -> faiss.Index:
     return index
 
 
+def save_faiss_index(faiss_index: faiss.Index, filepath: str) -> None:
+    """Save FAISS index to disk for reuse (KISS: save once, load many times!)."""
+    faiss.write_index(faiss_index, filepath)
+    print(f"✅ Saved FAISS index to {filepath}\n")
+
+
+def load_faiss_index(filepath: str) -> Optional[faiss.Index]:
+    """Load FAISS index from disk if it exists."""
+    if os.path.exists(filepath):
+        try:
+            index = faiss.read_index(filepath)
+            print(f"✅ Loaded FAISS index from {filepath}\n")
+            return index
+        except Exception as e:
+            print(f"⚠️  Could not load FAISS index: {e}\n")
+            return None
+    return None
+
+
 def search_similar_questions(
     query: str,
     embedding_model: Any,
@@ -625,9 +644,16 @@ def search_similar_questions(
     return results
 
 
-def implement_faiss_database(qa_database: List[Dict[str, str]], hf_token: str) -> Tuple[Any, faiss.Index]:
+def implement_faiss_database(qa_database: List[Dict[str, str]], hf_token: str, faiss_index_file: str = "faiss_index.bin") -> Tuple[Any, faiss.Index]:
     """
     Implement FAISS vector database.
+    
+    KISS Principle: Save embeddings to disk, load if exists (no need to regenerate!)
+    
+    Args:
+        qa_database: List of Q&A pairs
+        hf_token: Hugging Face token
+        faiss_index_file: Path to save/load FAISS index
     
     Returns:
         Tuple of (embedding_model, faiss_index)
@@ -642,21 +668,32 @@ def implement_faiss_database(qa_database: List[Dict[str, str]], hf_token: str) -
     embedding_model = SentenceTransformer(EMBEDDING_MODEL_ID)
     print("✅ Embedding model loaded!\n")
     
-    # Extract questions
-    questions = [qa["question"] for qa in qa_database]
-    print(f"📋 Creating embeddings for {len(questions)} questions...")
+    # Try to load existing FAISS index
+    faiss_index = load_faiss_index(faiss_index_file)
     
-    # Create embeddings
-    embeddings = create_embeddings(questions, embedding_model)
-    print(f"✅ Created {embeddings.shape[0]} embeddings of dimension {embeddings.shape[1]}\n")
-    
-    # Build FAISS index
-    print("📋 Building FAISS index...")
-    faiss_index = build_faiss_index(embeddings)
-    print(f"✅ FAISS index built with {faiss_index.ntotal} vectors\n")
+    if faiss_index is None:
+        # Extract questions
+        questions = [qa["question"] for qa in qa_database]
+        print(f"📋 Creating embeddings for {len(questions)} questions...")
+        
+        # Create embeddings
+        embeddings = create_embeddings(questions, embedding_model)
+        print(f"✅ Created {embeddings.shape[0]} embeddings of dimension {embeddings.shape[1]}\n")
+        
+        # Build FAISS index
+        print("📋 Building FAISS index...")
+        faiss_index = build_faiss_index(embeddings)
+        print(f"✅ FAISS index built with {faiss_index.ntotal} vectors\n")
+        
+        # Save to disk for future use (KISS: save once, reuse many times!)
+        print(f"💾 Saving FAISS index to {faiss_index_file}...")
+        save_faiss_index(faiss_index, faiss_index_file)
+    else:
+        print(f"✅ Using existing FAISS index ({faiss_index.ntotal} vectors)\n")
     
     # Test search
     print("🧪 Testing search functionality...")
+    questions = [qa["question"] for qa in qa_database]
     test_query = questions[0] if questions else "What services do you offer?"
     results = search_similar_questions(test_query, embedding_model, faiss_index, qa_database, top_k=3)
     
