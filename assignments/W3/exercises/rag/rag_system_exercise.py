@@ -245,9 +245,10 @@ def parse_qa_pairs(text: str) -> List[Dict[str, str]]:
     """
     Parse Q&A pairs from generated text.
     
-    Expected format:
-    Q: question text
-    A: answer text
+    Handles multiple formats:
+    - Q: question / A: answer
+    - Q. question / A. answer
+    - Numbered lists with Q/A
     """
     qa_pairs = []
     lines = text.split('\n')
@@ -257,26 +258,39 @@ def parse_qa_pairs(text: str) -> List[Dict[str, str]]:
     
     for line in lines:
         line = line.strip()
-        if line.startswith('Q:') or line.startswith('Q.'):
+        # Skip empty lines
+        if not line:
+            continue
+            
+        # Check for question markers
+        if re.match(r'^Q[\.:]?\s+', line, re.IGNORECASE) or re.match(r'^\d+[\.\)]\s*Q[\.:]?\s+', line, re.IGNORECASE):
+            # Save previous pair if exists
             if current_q and current_a:
-                qa_pairs.append({"question": current_q, "answer": current_a})
-            current_q = line[2:].strip()
+                qa_pairs.append({"question": current_q.strip(), "answer": current_a.strip()})
+            # Extract question (remove Q: or Q. prefix)
+            current_q = re.sub(r'^\d+[\.\)]\s*', '', line, flags=re.IGNORECASE)
+            current_q = re.sub(r'^Q[\.:]?\s+', '', current_q, flags=re.IGNORECASE).strip()
             current_a = None
-        elif line.startswith('A:') or line.startswith('A.'):
-            current_a = line[2:].strip()
-        elif current_a is not None:
+        # Check for answer markers
+        elif re.match(r'^A[\.:]?\s+', line, re.IGNORECASE) or re.match(r'^\d+[\.\)]\s*A[\.:]?\s+', line, re.IGNORECASE):
+            # Extract answer (remove A: or A. prefix)
+            current_a = re.sub(r'^\d+[\.\)]\s*', '', line, flags=re.IGNORECASE)
+            current_a = re.sub(r'^A[\.:]?\s+', '', current_a, flags=re.IGNORECASE).strip()
+        # Continue answer if we're in answer mode
+        elif current_a is not None and not re.match(r'^Q[\.:]?\s+', line, re.IGNORECASE):
             current_a += " " + line
-        elif current_q is not None and not line.startswith('Q'):
+        # Continue question if we're in question mode (before answer)
+        elif current_q is not None and current_a is None and not re.match(r'^A[\.:]?\s+', line, re.IGNORECASE):
             current_q += " " + line
     
     # Add last pair
     if current_q and current_a:
-        qa_pairs.append({"question": current_q, "answer": current_a})
+        qa_pairs.append({"question": current_q.strip(), "answer": current_a.strip()})
     
     return qa_pairs
 
 
-def generate_qa_database(chatbot: Any, system_prompt: str, business_name: str) -> List[Dict[str, str]]:
+def generate_qa_database(chatbot: Any, system_prompt: str, business_name: str, max_retries: int = 2) -> List[Dict[str, str]]:
     """
     Generate Q&A database using Mistral.
     
@@ -284,9 +298,10 @@ def generate_qa_database(chatbot: Any, system_prompt: str, business_name: str) -
         chatbot: Mistral pipeline
         system_prompt: System prompt for business context
         business_name: Name of the business
+        max_retries: Maximum number of retries if not enough pairs generated
     
     Returns:
-        List of Q&A dictionaries
+        List of Q&A dictionaries (10-15 pairs)
     """
     print("=" * 60)
     print("STEP 2: Generating Q&A Database")
@@ -294,45 +309,73 @@ def generate_qa_database(chatbot: Any, system_prompt: str, business_name: str) -
     print("\n📚 Asking Mistral to generate 10-15 Q&A pairs...")
     print("   This may take 30-60 seconds...\n")
     
-    prompt = f"""Generate 10-15 realistic question-answer pairs that customers might ask about {business_name}.
+    # More explicit prompt with clear formatting requirements
+    prompt = f"""You are a customer service representative for {business_name}. Generate EXACTLY 12-15 realistic question-answer pairs that customers frequently ask.
 
-Cover these topics:
-- Services offered
-- Pricing information
-- Processes and procedures
-- Technical details
-- Contact information
+REQUIREMENTS:
+- Generate at least 12 pairs, ideally 15 pairs
+- Cover ALL these topics: services, pricing, processes, technical details, contact information
+- Use EXACT format for each pair:
+  Q: [the customer's question]
+  A: [your detailed answer]
 
-Format each pair as:
-Q: [question]
-A: [answer]
+EXAMPLE FORMAT:
+Q: What services does {business_name} offer?
+A: {business_name} offers comprehensive solutions including...
 
-Make the questions realistic and the answers helpful and informative."""
+Q: How much do your services cost?
+A: Our pricing varies based on...
 
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": prompt},
-    ]
+IMPORTANT: Generate exactly 12-15 pairs. Make questions realistic and answers detailed and helpful."""
+
+    qa_database = []
+    attempts = 0
     
-    start_time = time.time()
-    with torch.no_grad():
-        result = chatbot(messages)
-    generation_time = time.time() - start_time
+    while len(qa_database) < 10 and attempts <= max_retries:
+        attempts += 1
+        if attempts > 1:
+            print(f"   🔄 Retry attempt {attempts-1}/{max_retries} (need at least 10 pairs)...\n")
+        
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt},
+        ]
+        
+        start_time = time.time()
+        with torch.no_grad():
+            # Temporarily increase max_new_tokens for Q&A generation
+            original_max_tokens = chatbot.task_specific_params.get("max_new_tokens", 512)
+            result = chatbot(messages, max_new_tokens=1024)  # More tokens for longer output
+        generation_time = time.time() - start_time
+        
+        # Extract response
+        response_text = result[0]["generated_text"][-1]["content"]
+        
+        # Parse Q&A pairs
+        qa_database = parse_qa_pairs(response_text)
+        
+        print(f"   Attempt {attempts}: Generated {len(qa_database)} Q&A pairs in {generation_time:.2f} seconds")
+        
+        if len(qa_database) >= 10:
+            break
     
-    # Extract response
-    response_text = result[0]["generated_text"][-1]["content"]
-    
-    # Parse Q&A pairs
-    qa_database = parse_qa_pairs(response_text)
-    
-    print(f"✅ Generated {len(qa_database)} Q&A pairs in {generation_time:.2f} seconds")
+    print(f"\n✅ Final result: {len(qa_database)} Q&A pairs generated")
     print("\n📋 Sample Q&A pairs:")
     for i, qa in enumerate(qa_database[:3], 1):
-        print(f"\n   {i}. Q: {qa['question'][:60]}...")
-        print(f"      A: {qa['answer'][:60]}...")
+        print(f"\n   {i}. Q: {qa['question'][:70]}...")
+        print(f"      A: {qa['answer'][:70]}...")
     
     if len(qa_database) < 10:
-        print(f"\n⚠️  Only {len(qa_database)} pairs generated. You may want to regenerate.")
+        print(f"\n⚠️  Warning: Only {len(qa_database)} pairs generated (target: 10-15)")
+        print("   The script will continue, but you may want to:")
+        print("   1. Check the prompt format")
+        print("   2. Increase max_new_tokens")
+        print("   3. Try regenerating manually")
+    elif len(qa_database) < 12:
+        print(f"\n💡 Note: Generated {len(qa_database)} pairs (target: 12-15)")
+        print("   This is acceptable, but more pairs would be better for testing.")
+    else:
+        print(f"\n✅ Excellent! Generated {len(qa_database)} pairs (target: 12-15)")
     
     print()
     return qa_database
@@ -743,9 +786,6 @@ def main() -> None:
         
         # Step 2: Generate Q&A database
         qa_database = generate_qa_database(chatbot, system_prompt, BUSINESS_NAME)
-        
-        if len(qa_database) < 5:
-            print("⚠️  Warning: Not enough Q&A pairs generated. Continuing anyway...\n")
         
         # Step 3: Implement FAISS database
         embedding_model, faiss_index = implement_faiss_database(qa_database, hf_token)
