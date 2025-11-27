@@ -152,13 +152,11 @@ QA_MODELS = [
     # Note: This is NOT a QA model - included to show the difference!
     "Qwen/Qwen2.5-0.5B-Instruct",
     
-    # 8. Mistral Instruction Model (General Purpose)
-    # Type: General instruction model (not QA-specific)
-    # Expected: Good accuracy, slower speed, no confidence scores
-    # Use case: Comparison - shows why explicit QA models are better for QA tasks
-    # Note: Mistral is great for text generation but not optimized for QA
-    # ⚠️ WARNING: 7B model requires GPU or 16GB+ RAM - may fail on CPU
-    "mistralai/Mistral-7B-Instruct-v0.3",
+    # Note: Mistral-7B-Instruct-v0.3 is NOT included here because:
+    # - Mistral is used ONLY for generating Q&A pairs (Step 2) - see MISTRAL_MODEL_ID
+    # - It's NOT meant to be evaluated as a QA model
+    # - The workflow: Mistral generates Q&A → embeddings created → QA models evaluate
+    # - Mistral is a text generation model, not optimized for QA tasks
 ]
 
 SIMILARITY_THRESHOLD = 0.7  # Threshold for determining if question is answerable
