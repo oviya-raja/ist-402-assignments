@@ -50,15 +50,91 @@ except ImportError:
 MISTRAL_MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.3"
 EMBEDDING_MODEL_ID = "sentence-transformers/all-MiniLM-L6-v2"  # Lightweight and fast
 
+# ============================================================================
+# QA MODEL CONFIGURATION
+# ============================================================================
+# 
+# Why Explicit QA Models?
+# -----------------------
+# Explicit QA models are specifically trained for question-answering tasks.
+# They provide:
+# - Confidence scores: Tell you how sure the model is about its answer
+# - Better accuracy: Trained specifically on QA datasets (SQuAD, etc.)
+# - Faster inference: Optimized for QA, not general text generation
+# - Structured output: Returns answer + confidence + start/end positions
+#
+# General models (like Qwen) can do QA but:
+# - No confidence scores (harder to evaluate)
+# - Slower (not optimized for QA)
+# - Less accurate (not specifically trained for QA)
+#
+# Performance Metrics We'll Compare:
+# - Accuracy: How correct are the answers?
+# - Speed: How fast is inference? (milliseconds)
+# - Confidence Scores: How sure is the model? (0.0 to 1.0)
+# - Composite Score: Balanced metric combining all factors
+#
+# Model Types:
+# - Extractive: Finds answer span in context (faster, more reliable)
+# - Generative: Generates new text (slower, more creative but less reliable)
+# ============================================================================
+
 QA_MODELS = [
+    # ========================================================================
+    # REQUIRED MODELS (4) - From class exercise
+    # ========================================================================
+    
+    # 1. T5-based Generative QA Model
+    # Type: Generative (creates new text, not just extracts)
+    # Expected: Medium accuracy, slower speed, no confidence scores
+    # Use case: When you need creative/paraphrased answers
     "consciousAI/question-answering-generative-t5-v1-base-s-q-c",
+    
+    # 2. RoBERTa-based Extractive QA Model
+    # Type: Extractive (finds answer in context)
+    # Expected: High accuracy, fast speed, good confidence scores
+    # Use case: Best balance - handles unanswerable questions well
+    # Trained on: SQuAD 2.0 (includes unanswerable questions)
     "deepset/roberta-base-squad2",
+    
+    # 3. BERT Large Extractive QA Model
+    # Type: Extractive (large model, high accuracy)
+    # Expected: Very high accuracy, slower speed, good confidence scores
+    # Use case: When accuracy is more important than speed
+    # Size: Large (~340M parameters) - needs more memory
     "google-bert/bert-large-cased-whole-word-masking-finetuned-squad",
+    
+    # 4. RAG-Optimized Model
+    # Type: RAG-specific (designed for retrieval-augmented generation)
+    # Expected: Good for RAG systems, medium speed
+    # Use case: Specifically designed for RAG workflows
+    # Size: 8B parameters (very large, needs GPU)
     "gasolsun/DynamicRAG-8B",
-    # Add 2 more models of your choice
+    
+    # ========================================================================
+    # ADDITIONAL MODELS (3) - For comparison and learning
+    # ========================================================================
+    
+    # 5. DistilBERT (Smaller, Faster)
+    # Type: Extractive (distilled from BERT)
+    # Expected: Good accuracy, very fast speed, smaller size
+    # Use case: Speed vs accuracy trade-off - 60% smaller, 60% faster than BERT
+    # Trade-off: Slightly less accurate than full BERT but much faster
     "distilbert-base-uncased-distilled-squad",
+    
+    # 6. BERT Tiny (Minimal Size)
+    # Type: Extractive (tiny version)
+    # Expected: Lower accuracy, very fast speed, tiny size
+    # Use case: Testing on resource-constrained devices
+    # Trade-off: Fastest but least accurate
     "mrm8488/bert-tiny-finetuned-squadv2",
-    "Qwen/Qwen2.5-0.5B-Instruct",  # Qwen3 series model for QA
+    
+    # 7. Qwen3 Instruction Model (General Purpose)
+    # Type: General instruction model (not QA-specific)
+    # Expected: Medium accuracy, slower speed, no confidence scores
+    # Use case: Comparison - shows why explicit QA models are better
+    # Note: This is NOT a QA model - included to show the difference!
+    "Qwen/Qwen2.5-0.5B-Instruct",
 ]
 
 SIMILARITY_THRESHOLD = 0.7  # Threshold for determining if question is answerable
@@ -671,28 +747,73 @@ def evaluate_qa_model(
     context: str,
     hf_token: str
 ) -> Dict[str, Any]:
-    """Evaluate a single QA model on a question-context pair."""
+    """
+    Evaluate a single QA model on a question-context pair.
+    
+    Why Explicit QA Models Help:
+    - They return confidence scores (0.0 to 1.0) showing how sure they are
+    - They're optimized for speed (milliseconds vs seconds)
+    - They handle edge cases better (unanswerable questions, ambiguous contexts)
+    - They provide structured output (answer, score, start/end positions)
+    
+    General models (like Qwen) require:
+    - Manual prompt engineering
+    - No confidence scores
+    - Slower inference
+    - Less reliable for QA tasks
+    """
     try:
+        # Try QA pipeline first (for explicit QA models)
         start_time = time.time()
-        qa_pipeline = pipeline(
-            "question-answering",
-            model=model_id,
-            token=hf_token
-        )
-        load_time = time.time() - start_time
-        
-        start_time = time.time()
-        result = qa_pipeline(question=question, context=context)
-        inference_time = time.time() - start_time
-        
-        return {
-            "model_id": model_id,
-            "answer": result.get("answer", ""),
-            "score": result.get("score", 0.0),
-            "load_time": load_time,
-            "inference_time": inference_time,
-            "success": True
-        }
+        try:
+            qa_pipeline = pipeline(
+                "question-answering",
+                model=model_id,
+                token=hf_token
+            )
+            load_time = time.time() - start_time
+            
+            start_time = time.time()
+            result = qa_pipeline(question=question, context=context)
+            inference_time = time.time() - start_time
+            
+            return {
+                "model_id": model_id,
+                "answer": result.get("answer", ""),
+                "score": result.get("score", 0.0),  # Confidence score (QA models provide this!)
+                "load_time": load_time,
+                "inference_time": inference_time,
+                "success": True,
+                "model_type": "explicit_qa"  # Explicit QA model
+            }
+        except (ValueError, OSError):
+            # Fallback: Try as text generation model (for general models like Qwen)
+            # This shows why explicit QA models are better - they work directly!
+            gen_pipeline = pipeline(
+                "text-generation",
+                model=model_id,
+                token=hf_token,
+                max_new_tokens=50
+            )
+            load_time = time.time() - start_time
+            
+            # Create prompt for general model
+            prompt = f"Context: {context}\nQuestion: {question}\nAnswer:"
+            start_time = time.time()
+            result = gen_pipeline(prompt, return_full_text=False)
+            inference_time = time.time() - start_time
+            
+            answer = result[0]["generated_text"].strip()
+            
+            return {
+                "model_id": model_id,
+                "answer": answer,
+                "score": 0.5,  # No confidence score available (general model limitation)
+                "load_time": load_time,
+                "inference_time": inference_time,
+                "success": True,
+                "model_type": "general"  # General model (not QA-specific)
+            }
     except Exception as e:
         return {
             "model_id": model_id,
@@ -701,7 +822,8 @@ def evaluate_qa_model(
             "load_time": 0.0,
             "inference_time": 0.0,
             "success": False,
-            "error": str(e)
+            "error": str(e),
+            "model_type": "unknown"
         }
 
 
@@ -749,18 +871,55 @@ def rank_qa_models(
     # Sort by composite score
     model_results.sort(key=lambda x: x["composite_score"], reverse=True)
     
-    # Print ranking
+    # Print ranking with educational explanations
     print("=" * 60)
     print("📊 Model Ranking (Best to Worst)")
     print("=" * 60)
+    print("\n💡 Understanding the Results:")
+    print("   - Confidence Score: How sure the model is (0.0 = unsure, 1.0 = very sure)")
+    print("   - Inference Time: How fast it responds (lower is better)")
+    print("   - Composite Score: Balanced metric (accuracy + speed)")
+    print("   - Model Type: 'explicit_qa' = QA-specific, 'general' = general purpose")
+    print()
+    
     for i, result in enumerate(model_results, 1):
-        print(f"\n   {i}. {result['model_id']}")
+        print(f"   {i}. {result['model_id']}")
         if result["success"]:
+            model_type = result.get("model_type", "unknown")
+            type_emoji = "✅" if model_type == "explicit_qa" else "⚠️"
+            type_label = "QA-Specific" if model_type == "explicit_qa" else "General Model"
+            
+            print(f"      Type: {type_emoji} {type_label}")
             print(f"      Confidence Score: {result['score']:.3f}")
             print(f"      Inference Time: {result['inference_time']:.2f}s")
             print(f"      Composite Score: {result['composite_score']:.3f}")
+            
+            # Educational note
+            if model_type == "general":
+                print(f"      💡 Note: General models don't provide confidence scores!")
         else:
-            print(f"      ❌ Failed to load/run")
+            print(f"      ❌ Failed to load/run: {result.get('error', 'Unknown error')}")
+        print()
+    
+    # Summary insights
+    print("=" * 60)
+    print("📚 Key Takeaways:")
+    print("=" * 60)
+    explicit_qa_count = sum(1 for r in model_results if r.get("model_type") == "explicit_qa" and r["success"])
+    general_count = sum(1 for r in model_results if r.get("model_type") == "general" and r["success"])
+    
+    print(f"\n✅ Explicit QA Models: {explicit_qa_count}")
+    print("   - Provide confidence scores")
+    print("   - Faster inference")
+    print("   - Better for production QA systems")
+    
+    if general_count > 0:
+        print(f"\n⚠️  General Models: {general_count}")
+        print("   - No confidence scores")
+        print("   - Slower inference")
+        print("   - Better for creative tasks, not QA")
+    
+    print("\n💡 Lesson: Use explicit QA models for question-answering tasks!")
     print("=" * 60)
     print()
     
