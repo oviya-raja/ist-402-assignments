@@ -21,7 +21,6 @@ import os
 import time
 import json
 import re
-import csv
 import warnings
 from typing import Dict, Tuple, List, Any, Optional
 
@@ -128,7 +127,7 @@ QA_MODELS = [
     "gasolsun/DynamicRAG-8B",
     
     # ========================================================================
-    # ADDITIONAL MODELS (3) - For comparison and learning
+    # ADDITIONAL MODELS (2) - For comparison and learning
     # ========================================================================
     
     # 5. DistilBERT (Smaller, Faster)
@@ -144,13 +143,6 @@ QA_MODELS = [
     # Use case: Testing on resource-constrained devices
     # Trade-off: Fastest but least accurate
     "mrm8488/bert-tiny-finetuned-squadv2",
-    
-    # 7. Qwen3 Instruction Model (General Purpose)
-    # Type: General instruction model (not QA-specific)
-    # Expected: Medium accuracy, slower speed, no confidence scores
-    # Use case: Comparison - shows why explicit QA models are better
-    # Note: This is NOT a QA model - included to show the difference!
-    "Qwen/Qwen2.5-0.5B-Instruct",
     
     # Note: Mistral-7B-Instruct-v0.3 is NOT included here because:
     # - Mistral is used ONLY for generating Q&A pairs (Step 2) - see MISTRAL_MODEL_ID
@@ -338,63 +330,6 @@ Always be courteous and aim to help customers understand how {business_name} can
 
 
 # ============================================================================
-# CSV STORAGE FOR Q&A PAIRS (KISS: Save once, reuse many times)
-# ============================================================================
-
-def save_qa_to_csv(
-    answerable_pairs: List[Dict[str, str]],
-    unanswerable_pairs: List[Dict[str, str]],
-    csv_file: str = "qa_database.csv"
-) -> None:
-    """
-    Save Q&A pairs to CSV file for reuse.
-    
-    KISS Principle: Save once, load many times - no need to regenerate!
-    """
-    print(f"💾 Saving Q&A pairs to {csv_file}...")
-    
-    with open(csv_file, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow(["type", "question", "answer"])  # Header
-        
-        for qa in answerable_pairs:
-            writer.writerow(["answerable", qa["question"], qa["answer"]])
-        
-        for qa in unanswerable_pairs:
-            writer.writerow(["unanswerable", qa["question"], qa["answer"]])
-    
-    print(f"✅ Saved {len(answerable_pairs)} answerable + {len(unanswerable_pairs)} unanswerable pairs to {csv_file}\n")
-
-
-def load_qa_from_csv(csv_file: str = "qa_database.csv") -> Tuple[List[Dict[str, str]], List[Dict[str, str]]]:
-    """
-    Load Q&A pairs from CSV file.
-    
-    Returns:
-        Tuple of (answerable_pairs, unanswerable_pairs)
-    """
-    if not os.path.exists(csv_file):
-        return [], []
-    
-    print(f"📂 Loading Q&A pairs from {csv_file}...")
-    
-    answerable = []
-    unanswerable = []
-    
-    with open(csv_file, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            qa_pair = {"question": row["question"], "answer": row["answer"]}
-            if row["type"] == "answerable":
-                answerable.append(qa_pair)
-            else:
-                unanswerable.append(qa_pair)
-    
-    print(f"✅ Loaded {len(answerable)} answerable + {len(unanswerable)} unanswerable pairs from {csv_file}\n")
-    return answerable, unanswerable
-
-
-# ============================================================================
 # STEP 2: GENERATE Q&A DATABASE
 # ============================================================================
 
@@ -439,39 +374,20 @@ def generate_qa_database(
     chatbot: Any, 
     system_prompt: str, 
     business_name: str, 
-    csv_file: str = "qa_database.csv",
-    max_retries: int = 2,
-    force_regenerate: bool = False
+    max_retries: int = 2
 ) -> Tuple[List[Dict[str, str]], List[Dict[str, str]]]:
     """
-    Generate Q&A database using Mistral, or load from CSV if exists.
-    
-    KISS/DRY Principle: Save to CSV once, reuse many times!
+    Generate Q&A database using Mistral.
     
     Args:
         chatbot: Mistral pipeline
         system_prompt: System prompt for business context
         business_name: Name of the business
-        csv_file: CSV file to save/load Q&A pairs
         max_retries: Maximum number of retries if not enough pairs generated
-        force_regenerate: If True, regenerate even if CSV exists
     
     Returns:
         Tuple of (answerable_pairs, unanswerable_pairs)
     """
-    # Try to load from CSV first (KISS: don't regenerate if we don't need to)
-    if not force_regenerate:
-        answerable, unanswerable = load_qa_from_csv(csv_file)
-        if answerable and unanswerable:
-            print("=" * 60)
-            print("STEP 2: Loading Q&A Database from CSV")
-            print("=" * 60)
-            print(f"\n✅ Using existing Q&A pairs from {csv_file}")
-            print(f"   Answerable pairs: {len(answerable)}")
-            print(f"   Unanswerable pairs: {len(unanswerable)}")
-            print("   💡 To regenerate, delete the CSV file or set force_regenerate=True\n")
-            return answerable, unanswerable
-    
     # Generate new Q&A pairs
     print("=" * 60)
     print("STEP 2: Generating Q&A Database")
@@ -568,9 +484,6 @@ Return ONLY the JSON, nothing else."""
     else:
         print(f"\n✅ Excellent! Generated {len(answerable_pairs)} answerable + {len(unanswerable_pairs)} unanswerable pairs")
     
-    # Save to CSV for future use (KISS: save once, reuse many times!)
-    save_qa_to_csv(answerable_pairs, unanswerable_pairs, csv_file)
-    
     print()
     return answerable_pairs, unanswerable_pairs
 
@@ -593,25 +506,6 @@ def build_faiss_index(embeddings: np.ndarray) -> faiss.Index:
     index = faiss.IndexFlatL2(dimension)  # L2 distance for similarity
     index.add(embeddings)
     return index
-
-
-def save_faiss_index(faiss_index: faiss.Index, filepath: str) -> None:
-    """Save FAISS index to disk for reuse (KISS: save once, load many times!)."""
-    faiss.write_index(faiss_index, filepath)
-    print(f"✅ Saved FAISS index to {filepath}\n")
-
-
-def load_faiss_index(filepath: str) -> Optional[faiss.Index]:
-    """Load FAISS index from disk if it exists."""
-    if os.path.exists(filepath):
-        try:
-            index = faiss.read_index(filepath)
-            print(f"✅ Loaded FAISS index from {filepath}\n")
-            return index
-        except Exception as e:
-            print(f"⚠️  Could not load FAISS index: {e}\n")
-            return None
-    return None
 
 
 def search_similar_questions(
@@ -644,16 +538,13 @@ def search_similar_questions(
     return results
 
 
-def implement_faiss_database(qa_database: List[Dict[str, str]], hf_token: str, faiss_index_file: str = "faiss_index.bin") -> Tuple[Any, faiss.Index]:
+def implement_faiss_database(qa_database: List[Dict[str, str]], hf_token: str) -> Tuple[Any, faiss.Index]:
     """
     Implement FAISS vector database.
-    
-    KISS Principle: Save embeddings to disk, load if exists (no need to regenerate!)
     
     Args:
         qa_database: List of Q&A pairs
         hf_token: Hugging Face token
-        faiss_index_file: Path to save/load FAISS index
     
     Returns:
         Tuple of (embedding_model, faiss_index)
@@ -668,32 +559,21 @@ def implement_faiss_database(qa_database: List[Dict[str, str]], hf_token: str, f
     embedding_model = SentenceTransformer(EMBEDDING_MODEL_ID)
     print("✅ Embedding model loaded!\n")
     
-    # Try to load existing FAISS index
-    faiss_index = load_faiss_index(faiss_index_file)
+    # Extract questions
+    questions = [qa["question"] for qa in qa_database]
+    print(f"📋 Creating embeddings for {len(questions)} questions...")
     
-    if faiss_index is None:
-        # Extract questions
-        questions = [qa["question"] for qa in qa_database]
-        print(f"📋 Creating embeddings for {len(questions)} questions...")
-        
-        # Create embeddings
-        embeddings = create_embeddings(questions, embedding_model)
-        print(f"✅ Created {embeddings.shape[0]} embeddings of dimension {embeddings.shape[1]}\n")
-        
-        # Build FAISS index
-        print("📋 Building FAISS index...")
-        faiss_index = build_faiss_index(embeddings)
-        print(f"✅ FAISS index built with {faiss_index.ntotal} vectors\n")
-        
-        # Save to disk for future use (KISS: save once, reuse many times!)
-        print(f"💾 Saving FAISS index to {faiss_index_file}...")
-        save_faiss_index(faiss_index, faiss_index_file)
-    else:
-        print(f"✅ Using existing FAISS index ({faiss_index.ntotal} vectors)\n")
+    # Create embeddings
+    embeddings = create_embeddings(questions, embedding_model)
+    print(f"✅ Created {embeddings.shape[0]} embeddings of dimension {embeddings.shape[1]}\n")
+    
+    # Build FAISS index
+    print("📋 Building FAISS index...")
+    faiss_index = build_faiss_index(embeddings)
+    print(f"✅ FAISS index built with {faiss_index.ntotal} vectors\n")
     
     # Test search
     print("🧪 Testing search functionality...")
-    questions = [qa["question"] for qa in qa_database]
     test_query = questions[0] if questions else "What services do you offer?"
     results = search_similar_questions(test_query, embedding_model, faiss_index, qa_database, top_k=3)
     
@@ -1000,10 +880,8 @@ def rank_qa_models(
     1. Speed: Measure response time (milliseconds)
     2. Confidence Scores: How sure is the model? (0.0 to 1.0)
     3. Answer Quality: How correct/helpful is the answer?
-    4. Composite Performance: Balanced metric combining all factors
     
-    Models are tested on multiple questions from the Q&A database to get
-    average performance metrics.
+    Models are tested on questions from the Q&A database.
     """
     print("=" * 60)
     print("STEP 6: Model Experimentation and Ranking")
@@ -1013,20 +891,19 @@ def rank_qa_models(
     print("   1. Speed: Response time (milliseconds)")
     print("   2. Confidence Scores: Model certainty (0.0 to 1.0)")
     print("   3. Answer Quality: Correctness and helpfulness")
-    print("   4. Composite Score: Balanced performance metric")
     print("\n💡 What You'll See:")
-    print("   - Each model will be tested on 3 sample questions")
-    print("   - Results show average confidence score and speed")
-    print("   - Models are ranked by composite performance")
+    print("   - Each model will be tested on sample questions")
+    print("   - Results show confidence score and speed")
+    print("   - Models are ranked by performance")
     print("   - Note: Model loading may take time (first time only)")
     print("\n   ⏳ This may take several minutes...\n")
     
     # Use test questions if provided, otherwise use Q&A database
     if test_questions is None:
-        test_questions = [qa["question"] for qa in qa_database[:5]]  # Test on 5 questions
+        test_questions = [qa["question"] for qa in qa_database[:3]]  # Test on 3 questions
     
     # Build context from answers
-    context = " ".join([qa["answer"] for qa in qa_database[:5]])
+    context = " ".join([qa["answer"] for qa in qa_database[:3]])
     
     model_results = []
     
@@ -1035,43 +912,11 @@ def rank_qa_models(
         model_name = model_id.split("/")[-1] if "/" in model_id else model_id
         print(f"   [{i}/{len(QA_MODELS)}] Testing {model_name}...", end=" ", flush=True)
         
-        # Test on multiple questions for better evaluation
-        scores = []
-        times = []
-        answers = []
-        
-        # Suppress output during model evaluation
+        # Test on a single question for evaluation
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            for question in test_questions[:3]:  # Test on 3 questions for average
-                result = evaluate_qa_model(model_id, question, context, hf_token)
-                if result["success"]:
-                    scores.append(result["score"])
-                    times.append(result["inference_time"])
-                    answers.append(result["answer"])
-        
-        if scores:
-            avg_score = sum(scores) / len(scores)
-            avg_time = sum(times) / len(times)
-            result = {
-                "model_id": model_id,
-                "score": avg_score,
-                "inference_time": avg_time,
-                "load_time": 0.0,  # Not tracking load time per question
-                "success": True,
-                "model_type": result.get("model_type", "unknown"),
-                "num_tests": len(scores)
-            }
-        else:
-            result = {
-                "model_id": model_id,
-                "score": 0.0,
-                "inference_time": 0.0,
-                "load_time": 0.0,
-                "success": False,
-                "error": "All test questions failed",
-                "model_type": "unknown"
-            }
+            question = test_questions[0]  # Test on first question
+            result = evaluate_qa_model(model_id, question, context, hf_token)
         
         model_results.append(result)
         
@@ -1089,18 +934,8 @@ def rank_qa_models(
                 print(f"❌ Failed: {short_error}")
         print()
     
-    # Rank models by composite score (score * 0.6 + speed_score * 0.4)
-    for result in model_results:
-        if result["success"] and result["inference_time"] > 0:
-            # Normalize speed (faster = higher score, max 1.0)
-            max_time = max(r["inference_time"] for r in model_results if r["success"] and r["inference_time"] > 0)
-            speed_score = 1.0 - (result["inference_time"] / max_time) if max_time > 0 else 0.0
-            result["composite_score"] = result["score"] * 0.6 + speed_score * 0.4
-        else:
-            result["composite_score"] = 0.0
-    
-    # Sort by composite score
-    model_results.sort(key=lambda x: x["composite_score"], reverse=True)
+    # Rank models by confidence score (primary) and speed (secondary)
+    model_results.sort(key=lambda x: (x.get("score", 0.0), -x.get("inference_time", float('inf'))), reverse=True)
     
     # Print ranking with educational explanations
     print("=" * 60)
@@ -1109,7 +944,6 @@ def rank_qa_models(
     print("\n💡 Understanding the Results:")
     print("   - Confidence Score: How sure the model is (0.0 = unsure, 1.0 = very sure)")
     print("   - Inference Time: How fast it responds (lower is better)")
-    print("   - Composite Score: Balanced metric (accuracy + speed)")
     print("   - Model Type: 'explicit_qa' = QA-specific, 'general' = general purpose")
     print()
     
@@ -1123,7 +957,6 @@ def rank_qa_models(
             print(f"      Type: {type_emoji} {type_label}")
             print(f"      Confidence Score: {result['score']:.3f}")
             print(f"      Inference Time: {result['inference_time']:.2f}s")
-            print(f"      Composite Score: {result['composite_score']:.3f}")
             
             # Educational note
             if model_type == "general":
@@ -1151,35 +984,6 @@ def rank_qa_models(
         print("   - Better for creative tasks, not QA")
     
     print("\n💡 Lesson: Use explicit QA models for question-answering tasks!")
-    
-    # Create comparison table
-    print("\n" + "=" * 60)
-    print("📊 MODEL COMPARISON TABLE")
-    print("=" * 60)
-    print(f"\n{'Rank':<6} {'Model':<50} {'Type':<15} {'Confidence':<12} {'Speed (s)':<12} {'Composite':<12}")
-    print("-" * 110)
-    
-    for i, result in enumerate(model_results, 1):
-        model_name = result['model_id'].split('/')[-1][:48]  # Shorten name
-        model_type = "QA-Specific" if result.get("model_type") == "explicit_qa" else "General"
-        
-        if result["success"]:
-            confidence = f"{result['score']:.3f}"
-            speed = f"{result['inference_time']:.3f}"
-            composite = f"{result['composite_score']:.3f}"
-        else:
-            confidence = "N/A"
-            speed = "N/A"
-            composite = "Failed"
-        
-        print(f"{i:<6} {model_name:<50} {model_type:<15} {confidence:<12} {speed:<12} {composite:<12}")
-    
-    print("-" * 110)
-    print("\n💡 Table Legend:")
-    print("   - Rank: Best (1) to worst")
-    print("   - Confidence: 0.0 (unsure) to 1.0 (very sure)")
-    print("   - Speed: Lower is better (milliseconds)")
-    print("   - Composite: Balanced score (higher is better)")
     print("=" * 60)
     print()
     
@@ -1219,13 +1023,10 @@ def main() -> None:
         system_prompt = create_system_prompt(BUSINESS_NAME, ROLE)
         
         # Step 2: Generate Q&A database (answerable for knowledge base, unanswerable for testing)
-        # KISS: Saves to CSV, loads from CSV if exists (no need to regenerate every time!)
         answerable_qa, unanswerable_qa = generate_qa_database(
             chatbot, 
             system_prompt, 
-            BUSINESS_NAME,
-            csv_file="qa_database.csv",
-            force_regenerate=False  # Set to True to regenerate
+            BUSINESS_NAME
         )
         
         # Use answerable pairs as the knowledge base
