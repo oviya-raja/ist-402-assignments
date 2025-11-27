@@ -54,6 +54,10 @@ EMBEDDING_MODEL_ID = "sentence-transformers/all-MiniLM-L6-v2"  # Lightweight and
 # QA MODEL CONFIGURATION
 # ============================================================================
 # 
+# Extractive vs Generative Models:
+# - Extractive: Finds answer directly in context (fast, reliable, has confidence scores) - Best for RAG systems
+# - Generative: Creates new text to answer (slower, more flexible, no confidence scores) - Better for creative tasks
+# 
 # Why Explicit QA Models?
 # -----------------------
 # Explicit QA models are specifically trained for question-answering tasks.
