@@ -140,6 +140,13 @@ QA_MODELS = [
     # Use case: Comparison - shows why explicit QA models are better
     # Note: This is NOT a QA model - included to show the difference!
     "Qwen/Qwen2.5-0.5B-Instruct",
+    
+    # 8. Mistral Instruction Model (General Purpose)
+    # Type: General instruction model (not QA-specific)
+    # Expected: Good accuracy, slower speed, no confidence scores
+    # Use case: Comparison - shows why explicit QA models are better for QA tasks
+    # Note: Mistral is great for text generation but not optimized for QA
+    "mistralai/Mistral-7B-Instruct-v0.3",
 ]
 
 SIMILARITY_THRESHOLD = 0.7  # Threshold for determining if question is answerable
