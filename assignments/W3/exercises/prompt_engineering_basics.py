@@ -131,17 +131,24 @@ def get_device_configuration() -> Dict[str, Any]:
     Returns:
         Device configuration dictionary
     """
-    print("🔍 Checking environment...")
+    print("STEP 1: Checking Your System")
+    print("=" * 60)
+    print("\n🔍 What are we checking?")
+    print("   We need to know if you have a GPU (graphics card) available.")
+    print("   GPUs are much faster for AI, but CPUs work too (just slower).\n")
     print(f"   Python version: {sys.version.split()[0]}")
     
     is_gpu, gpu_name, cuda_version = check_gpu_availability()
     
     if is_gpu:
-        print(f"   ✅ GPU Available: {gpu_name}")
+        print(f"\n   ✅ Great! GPU Available: {gpu_name}")
         print(f"   ✅ CUDA Version: {cuda_version}")
+        print("   🚀 Your system will run much faster with GPU!")
         return create_gpu_config(gpu_name, cuda_version)
     else:
-        print("   ⚠️  GPU NOT detected - using CPU")
+        print("\n   ⚠️  GPU NOT detected - using CPU")
+        print("   💡 Don't worry! CPU works fine, it's just slower.")
+        print("   💡 For faster results, consider using Google Colab (free GPU)")
         return create_cpu_config()
 
 
@@ -227,18 +234,23 @@ def load_model(model_id: str, hf_token: str, device_config: Dict[str, Any]) -> A
 def print_loading_header(model_id: str, device_config: Dict[str, Any]) -> None:
     """Print header information for model loading."""
     print("\n" + "=" * 60)
-    print("Loading Model and Tokenizer")
+    print("STEP 2: Loading the AI Model")
     print("=" * 60)
-    print(f"📋 Model: {model_id}")
-    print(f"📋 Device: {device_config['device']}")
-    print(f"📋 Torch dtype: {device_config['torch_dtype']}")
+    print("\n📚 What's happening?")
+    print("   We're downloading and loading the AI model into memory.")
+    print("   Think of it like opening a large book - it takes time to load all the pages!")
+    print(f"\n📋 Model: {model_id}")
+    print(f"📋 Device: {device_config['device']} (where the model will run)")
+    print(f"📋 Data Type: {device_config['torch_dtype']} (how numbers are stored)")
     print(f"\n⏳ Loading tokenizer and model...")
-    print(f"   This may take {device_config['load_time_estimate']} on first run...\n")
+    print(f"   ⏱️  Estimated time: {device_config['load_time_estimate']} on first run")
+    print("   💡 Tip: This is slower the first time (downloading), faster after that!\n")
 
 
 def print_loading_success() -> None:
     """Print success message after loading."""
-    print("✅ Model and tokenizer loaded successfully!\n")
+    print("✅ Model and tokenizer loaded successfully!")
+    print("   🎉 The AI model is now ready to generate text!\n")
 
 
 # ============================================================================
@@ -269,13 +281,17 @@ def build_pipeline_kwargs(model: Any, tokenizer: Any, device_config: Dict[str, A
 def create_pipeline_from_model(model: Any, tokenizer: Any, device_config: Dict[str, Any]) -> Any:
     """Create text generation pipeline from loaded model."""
     print("=" * 60)
-    print("Creating Pipeline from Loaded Model")
+    print("Setting Up the Pipeline (Easy Way)")
     print("=" * 60)
+    print("\n📚 What's happening?")
+    print("   We're wrapping the model in a 'pipeline' - a simple interface")
+    print("   that handles all the complex steps (tokenization, formatting, etc.)")
+    print("   for us. It's like putting training wheels on a bike - easier to use!\n")
     
     pipeline_kwargs = build_pipeline_kwargs(model, tokenizer, device_config)
     chatbot = pipeline("text-generation", **pipeline_kwargs)
     
-    print("✅ Pipeline created!\n")
+    print("✅ Pipeline created and ready to use!\n")
     return chatbot
 
 
@@ -286,15 +302,21 @@ def create_pipeline_from_model(model: Any, tokenizer: Any, device_config: Dict[s
 def generate_with_pipeline(chatbot: Any, messages: List[Dict[str, str]]) -> None:
     """Generate response using pipeline approach."""
     print("=" * 60)
-    print("Pipeline Approach: Generating Response")
+    print("Generating AI Response (Pipeline Method)")
     print("=" * 60)
+    print("\n📚 What's happening?")
+    print("   The pipeline is processing your message and generating a response.")
+    print("   It's doing all the work automatically - tokenization, model inference,")
+    print("   and decoding - all in one simple function call!\n")
     
     start_time = time.time()
     with torch.no_grad():
         result = chatbot(messages)
     generation_time = time.time() - start_time
     
-    print(f"✅ Response generated in {generation_time:.2f} seconds\n")
+    print(f"✅ Response generated in {generation_time:.2f} seconds")
+    print(f"   ⚡ That's pretty fast for AI text generation!\n")
+    
     print_result(result)
     print_clean_response(result)
 
@@ -346,7 +368,9 @@ def generate_with_direct_model(model: Any, tokenizer: Any, device_config: Dict[s
 def print_result(result: Any) -> None:
     """Print full result in JSON format."""
     print("=" * 60)
-    print("Full Result:")
+    print("Full Result (Raw Output):")
+    print("   💡 This shows the complete response structure with all metadata")
+    print("=" * 60)
     print(json.dumps(result, indent=2))
     print("=" * 60)
 
@@ -355,7 +379,9 @@ def print_clean_response(result: Any) -> None:
     """Print clean assistant response."""
     assistant_reply = result[0]["generated_text"][-1]["content"]
     print("\n" + "=" * 60)
-    print("Clean Assistant Response:")
+    print("Clean Assistant Response (Just the Text):")
+    print("   💡 This is the actual response text, cleaned up and easy to read")
+    print("=" * 60)
     print(assistant_reply)
     print("=" * 60)
     print()
@@ -506,27 +532,34 @@ def main() -> None:
         # ====================================================================
         # UNDERSTANDING THE TWO APPROACHES
         # ====================================================================
-        print("=" * 60)
-        print("Understanding Pipeline vs Direct Model Approaches")
-        print("=" * 60)
-        print("\n📦 PIPELINE APPROACH:")
-        print("   • Uses Hugging Face's pipeline() wrapper")
-        print("   • Higher-level abstraction - simpler to use")
-        print("   • Automatically handles tokenization and formatting")
-        print("   • Good for: Quick prototyping, simple use cases")
-        print("   • Supports: System prompts + User prompts")
-        print("   • Example: chatbot(messages) - just pass messages")
-        print("\n🔧 DIRECT MODEL APPROACH:")
-        print("   • Directly uses model.generate() method")
-        print("   • Lower-level control - more flexibility")
-        print("   • Manual tokenization and input preparation")
-        print("   • Good for: Custom logic, fine-grained control")
-        print("   • Supports: User prompts (can add system via chat template)")
-        print("   • Example: model.generate(**inputs) - prepare inputs yourself")
         print("\n" + "=" * 60)
-        print("Key Difference:")
-        print("  Pipeline = Easy but less control")
-        print("  Direct   = More work but full control")
+        print("📖 Learning: Two Ways to Use AI Models")
+        print("=" * 60)
+        print("\n🎓 As a student, it's important to understand both approaches:")
+        print("\n" + "─" * 60)
+        print("📦 METHOD 1: Pipeline Approach (The Easy Way)")
+        print("─" * 60)
+        print("   Think of it like: Using a vending machine")
+        print("   • You put in your request (message)")
+        print("   • The machine does everything automatically")
+        print("   • You get your result (response)")
+        print("\n   ✅ Pros: Simple, fast to code, less error-prone")
+        print("   ❌ Cons: Less control, can't customize much")
+        print("   🎯 Best for: Learning, quick tests, simple projects")
+        print("\n" + "─" * 60)
+        print("🔧 METHOD 2: Direct Model Approach (The Detailed Way)")
+        print("─" * 60)
+        print("   Think of it like: Cooking from scratch")
+        print("   • You prepare ingredients (tokenize text)")
+        print("   • You cook step by step (run model)")
+        print("   • You plate the food (decode response)")
+        print("\n   ✅ Pros: Full control, can customize everything")
+        print("   ❌ Cons: More code, more things that can go wrong")
+        print("   🎯 Best for: Advanced projects, research, custom needs")
+        print("\n" + "=" * 60)
+        print("💡 Key Takeaway:")
+        print("   Pipeline = Easy but less control (like using a library function)")
+        print("   Direct   = More work but full control (like writing your own function)")
         print("=" * 60 + "\n")
         
         # ====================================================================
@@ -537,10 +570,12 @@ def main() -> None:
         USER_PROMPT_1 = "Who are you?"  # User prompt: Question from the user
         
         print("\n" + "=" * 60)
-        print("EXAMPLE 1: Pipeline Approach (High-Level)")
+        print("EXAMPLE 1: Pipeline Approach (The Easy Way)")
         print("=" * 60)
-        print("System Prompt:", SYSTEM_PROMPT)
-        print("User Prompt:", USER_PROMPT_1)
+        print("\n📝 What we're asking the AI:")
+        print(f"   System Role: {SYSTEM_PROMPT}")
+        print(f"   User Question: {USER_PROMPT_1}")
+        print("\n💡 Remember: Pipeline does all the work automatically!")
         print("=" * 60 + "\n")
         
         run_pipeline_example(
@@ -558,10 +593,12 @@ def main() -> None:
         USER_PROMPT_2 = "What's the weather like in Paris?"  # User prompt: Question from the user
         
         print("\n" + "=" * 60)
-        print("EXAMPLE 2: Direct Model Approach (Low-Level)")
+        print("EXAMPLE 2: Direct Model Approach (The Detailed Way)")
         print("=" * 60)
-        print("User Prompt:", USER_PROMPT_2)
-        print("(No system prompt - using direct model.generate())")
+        print("\n📝 What we're asking the AI:")
+        print(f"   User Question: {USER_PROMPT_2}")
+        print("   (No system prompt in this example)")
+        print("\n💡 Remember: We're doing each step manually for full control!")
         print("=" * 60 + "\n")
         
         run_direct_model_example(
