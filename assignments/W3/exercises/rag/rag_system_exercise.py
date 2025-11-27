@@ -241,11 +241,14 @@ Always be courteous and aim to help customers understand how {business_name} can
 # STEP 2: GENERATE Q&A DATABASE
 # ============================================================================
 
-def parse_qa_json(response_text: str) -> List[Dict[str, str]]:
+def parse_qa_json(response_text: str) -> Tuple[List[Dict[str, str]], List[Dict[str, str]]]:
     """
     Parse Q&A pairs from JSON response.
     
     KISS Principle: Simple JSON parsing instead of complex text parsing.
+    
+    Returns:
+        Tuple of (answerable_pairs, unanswerable_pairs)
     """
     try:
         # Try to extract JSON from response (might have markdown code blocks)
@@ -260,21 +263,22 @@ def parse_qa_json(response_text: str) -> List[Dict[str, str]]:
         # Parse JSON
         data = json.loads(response_text)
         
-        # Handle different JSON structures
-        if isinstance(data, list):
-            return data
-        elif isinstance(data, dict) and "qa_pairs" in data:
-            return data["qa_pairs"]
-        elif isinstance(data, dict) and "questions" in data:
-            return data["questions"]
-        else:
-            return []
+        # Extract answerable and unanswerable pairs
+        answerable = data.get("answerable", [])
+        unanswerable = data.get("unanswerable", [])
+        
+        # Fallback: if old format (just "qa_pairs"), treat all as answerable
+        if not answerable and not unanswerable and "qa_pairs" in data:
+            answerable = data["qa_pairs"]
+            unanswerable = []
+        
+        return answerable, unanswerable
     except json.JSONDecodeError:
-        # Fallback: return empty list if JSON parsing fails
-        return []
+        # Fallback: return empty lists if JSON parsing fails
+        return [], []
 
 
-def generate_qa_database(chatbot: Any, system_prompt: str, business_name: str, max_retries: int = 2) -> List[Dict[str, str]]:
+def generate_qa_database(chatbot: Any, system_prompt: str, business_name: str, max_retries: int = 2) -> Tuple[List[Dict[str, str]], List[Dict[str, str]]]:
     """
     Generate Q&A database using Mistral.
     
@@ -285,36 +289,46 @@ def generate_qa_database(chatbot: Any, system_prompt: str, business_name: str, m
         max_retries: Maximum number of retries if not enough pairs generated
     
     Returns:
-        List of Q&A dictionaries (10-15 pairs)
+        Tuple of (answerable_pairs, unanswerable_pairs)
     """
     print("=" * 60)
     print("STEP 2: Generating Q&A Database")
     print("=" * 60)
-    print("\n📚 Asking Mistral to generate 10-15 Q&A pairs...")
+    print("\n📚 Generating 15 question pairs: 7 answerable + 7 unanswerable")
+    print("   Answerable: Questions the business CAN answer (knowledge base)")
+    print("   Unanswerable: Questions the business CANNOT answer (outside expertise)")
     print("   This may take 30-60 seconds...\n")
     
     # KISS Principle: Request JSON format directly - no parsing needed!
-    prompt = f"""Generate 12-15 realistic question-answer pairs for {business_name} customers.
+    prompt = f"""Generate 15 question-answer pairs for {business_name}:
 
 REQUIREMENTS:
-- Generate 12-15 pairs
-- Cover: services, pricing, processes, technical details, contact information
-- Return ONLY valid JSON format (no other text)
+- Generate exactly 15 pairs total
+- 7 answerable pairs: Questions about {business_name}'s services, pricing, processes, technical details, contact info (these go in knowledge base)
+- 7 unanswerable pairs: Questions about competitor info, unrelated topics, personal details, things outside {business_name}'s expertise (these are for testing)
+- 1 additional pair (your choice: answerable or unanswerable)
+
+Return ONLY valid JSON format (no other text):
 
 JSON FORMAT:
 {{
-  "qa_pairs": [
+  "answerable": [
     {{"question": "What services do you offer?", "answer": "We offer..."}},
     {{"question": "How much does it cost?", "answer": "Our pricing..."}}
+  ],
+  "unanswerable": [
+    {{"question": "What do your competitors charge?", "answer": "I don't have information about competitors."}},
+    {{"question": "What's the weather today?", "answer": "I cannot provide weather information."}}
   ]
 }}
 
 Return ONLY the JSON, nothing else."""
 
-    qa_database = []
+    answerable_pairs = []
+    unanswerable_pairs = []
     attempts = 0
     
-    while len(qa_database) < 10 and attempts <= max_retries:
+    while (len(answerable_pairs) < 7 or len(unanswerable_pairs) < 7) and attempts <= max_retries:
         attempts += 1
         if attempts > 1:
             print(f"   🔄 Retry attempt {attempts-1}/{max_retries} (need at least 10 pairs)...\n")
@@ -339,33 +353,41 @@ Return ONLY the JSON, nothing else."""
         response_text = result[0]["generated_text"][-1]["content"]
         
         # Parse Q&A pairs from JSON (KISS: simple JSON parsing)
-        qa_database = parse_qa_json(response_text)
+        answerable, unanswerable = parse_qa_json(response_text)
         
-        print(f"   Attempt {attempts}: Generated {len(qa_database)} Q&A pairs in {generation_time:.2f} seconds")
+        answerable_pairs = answerable
+        unanswerable_pairs = unanswerable
         
-        if len(qa_database) >= 10:
+        total_pairs = len(answerable_pairs) + len(unanswerable_pairs)
+        print(f"   Attempt {attempts}: Generated {len(answerable_pairs)} answerable + {len(unanswerable_pairs)} unanswerable = {total_pairs} total pairs in {generation_time:.2f} seconds")
+        
+        if len(answerable_pairs) >= 7 and len(unanswerable_pairs) >= 7:
             break
     
-    print(f"\n✅ Final result: {len(qa_database)} Q&A pairs generated")
-    print("\n📋 Sample Q&A pairs:")
-    for i, qa in enumerate(qa_database[:3], 1):
+    print(f"\n✅ Final result:")
+    print(f"   Answerable pairs: {len(answerable_pairs)} (target: 7+)")
+    print(f"   Unanswerable pairs: {len(unanswerable_pairs)} (target: 7+)")
+    print(f"   Total: {len(answerable_pairs) + len(unanswerable_pairs)} pairs")
+    
+    print("\n📋 Sample answerable pairs (knowledge base):")
+    for i, qa in enumerate(answerable_pairs[:3], 1):
         print(f"\n   {i}. Q: {qa['question'][:70]}...")
         print(f"      A: {qa['answer'][:70]}...")
     
-    if len(qa_database) < 10:
-        print(f"\n⚠️  Warning: Only {len(qa_database)} pairs generated (target: 10-15)")
-        print("   The script will continue, but you may want to:")
-        print("   1. Check the prompt format")
-        print("   2. Increase max_new_tokens")
-        print("   3. Try regenerating manually")
-    elif len(qa_database) < 12:
-        print(f"\n💡 Note: Generated {len(qa_database)} pairs (target: 12-15)")
-        print("   This is acceptable, but more pairs would be better for testing.")
+    print("\n📋 Sample unanswerable pairs (for testing):")
+    for i, qa in enumerate(unanswerable_pairs[:3], 1):
+        print(f"\n   {i}. Q: {qa['question'][:70]}...")
+        print(f"      A: {qa['answer'][:70]}...")
+    
+    if len(answerable_pairs) < 7 or len(unanswerable_pairs) < 7:
+        print(f"\n⚠️  Warning: Need at least 7 of each type")
+        print(f"   Got: {len(answerable_pairs)} answerable, {len(unanswerable_pairs)} unanswerable")
+        print("   The script will continue, but you may want to regenerate.")
     else:
-        print(f"\n✅ Excellent! Generated {len(qa_database)} pairs (target: 12-15)")
+        print(f"\n✅ Excellent! Generated {len(answerable_pairs)} answerable + {len(unanswerable_pairs)} unanswerable pairs")
     
     print()
-    return qa_database
+    return answerable_pairs, unanswerable_pairs
 
 
 # ============================================================================
@@ -771,14 +793,34 @@ def main() -> None:
         # Step 1: Create system prompt
         system_prompt = create_system_prompt(BUSINESS_NAME, ROLE)
         
-        # Step 2: Generate Q&A database
-        qa_database = generate_qa_database(chatbot, system_prompt, BUSINESS_NAME)
+        # Step 2: Generate Q&A database (answerable for knowledge base, unanswerable for testing)
+        answerable_qa, unanswerable_qa = generate_qa_database(chatbot, system_prompt, BUSINESS_NAME)
         
-        # Step 3: Implement FAISS database
+        # Use answerable pairs as the knowledge base
+        qa_database = answerable_qa
+        
+        # Step 3: Implement FAISS database (using answerable pairs as knowledge base)
         embedding_model, faiss_index = implement_faiss_database(qa_database, hf_token)
         
-        # Step 4: Create test questions
-        answerable, unanswerable = create_test_questions(chatbot, system_prompt, BUSINESS_NAME)
+        # Step 4: Use unanswerable pairs from Step 2 as test questions
+        # Also generate a few more answerable test questions
+        print("=" * 60)
+        print("STEP 4: Preparing Test Questions")
+        print("=" * 60)
+        print("\n📚 Using unanswerable pairs from Step 2 as test questions")
+        print(f"   Unanswerable test questions: {len(unanswerable_qa)}")
+        
+        # Generate a few more answerable test questions for better testing
+        print("\n📚 Generating additional answerable test questions...")
+        additional_answerable = generate_test_questions(chatbot, system_prompt, "answerable", BUSINESS_NAME)
+        
+        # Combine: use generated answerable + additional answerable as test set
+        answerable = answerable_qa[:5] + additional_answerable[:2]  # 5 from knowledge base + 2 new = 7 total
+        unanswerable = unanswerable_qa[:7]  # Use 7 unanswerable from Step 2
+        
+        print(f"   Answerable test questions: {len(answerable)}")
+        print(f"   Unanswerable test questions: {len(unanswerable)}")
+        print()
         
         # Step 5: Test RAG system
         implement_and_test_questions(
