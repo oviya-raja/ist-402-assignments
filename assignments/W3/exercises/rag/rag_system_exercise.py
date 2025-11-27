@@ -22,7 +22,15 @@ import time
 import json
 import re
 import csv
+import warnings
 from typing import Dict, Tuple, List, Any, Optional
+
+# Suppress verbose warnings for cleaner student output
+warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", message=".*weights.*not initialized.*")
+warnings.filterwarnings("ignore", message=".*You should probably TRAIN.*")
+os.environ["TRANSFORMERS_VERBOSITY"] = "error"  # Suppress transformers warnings
+os.environ["TOKENIZERS_PARALLELISM"] = "false"  # Avoid tokenizer warnings
 
 # Try to import dotenv for .env file support
 try:
@@ -33,11 +41,14 @@ except ImportError:
 
 # Import required libraries
 try:
-    from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
+    from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, logging as transformers_logging
     from sentence_transformers import SentenceTransformer
     import torch
     import numpy as np
     import faiss
+    
+    # Suppress transformers library warnings
+    transformers_logging.set_verbosity_error()
 except ImportError:
     print("❌ Required packages not installed!")
     print("   Install with: pip install transformers torch sentence-transformers faiss-cpu")
@@ -250,7 +261,8 @@ def load_mistral_model(model_id: str, hf_token: str, device_config: Dict[str, An
     print("STEP 2: Loading Mistral Model")
     print("=" * 60)
     print(f"\n📚 Loading: {model_id}")
-    print(f"⏳ This may take 1-2 minutes on first run (downloading model)...\n")
+    print(f"⏳ This may take 1-2 minutes on first run (downloading model)...")
+    print(f"💡 Note: Verbose warnings are suppressed for cleaner output\n")
     
     tokenizer = AutoTokenizer.from_pretrained(model_id, token=hf_token)
     
@@ -571,7 +583,8 @@ Return ONLY the JSON, nothing else."""
 def create_embeddings(questions: List[str], embedding_model: Any) -> np.ndarray:
     """Create embeddings for questions using sentence transformers."""
     print("Creating embeddings for questions...")
-    embeddings = embedding_model.encode(questions, show_progress_bar=True)
+    # Suppress progress bar for cleaner output (students can see final results)
+    embeddings = embedding_model.encode(questions, show_progress_bar=False)
     return embeddings.astype('float32')
 
 
@@ -860,19 +873,23 @@ def evaluate_qa_model(
     - Less reliable for QA tasks
     """
     try:
-        # Try QA pipeline first (for explicit QA models)
-        start_time = time.time()
-        try:
-            qa_pipeline = pipeline(
-                "question-answering",
-                model=model_id,
-                token=hf_token
-            )
-            load_time = time.time() - start_time
+        # Suppress warnings during model loading and inference
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
             
+            # Try QA pipeline first (for explicit QA models)
             start_time = time.time()
-            result = qa_pipeline(question=question, context=context)
-            inference_time = time.time() - start_time
+            try:
+                qa_pipeline = pipeline(
+                    "question-answering",
+                    model=model_id,
+                    token=hf_token
+                )
+                load_time = time.time() - start_time
+                
+                start_time = time.time()
+                result = qa_pipeline(question=question, context=context)
+                inference_time = time.time() - start_time
             
             return {
                 "model_id": model_id,
@@ -883,22 +900,22 @@ def evaluate_qa_model(
                 "success": True,
                 "model_type": "explicit_qa"  # Explicit QA model
             }
-        except (ValueError, OSError):
-            # Fallback: Try as text generation model (for general models like Qwen)
-            # This shows why explicit QA models are better - they work directly!
-            gen_pipeline = pipeline(
-                "text-generation",
-                model=model_id,
-                token=hf_token,
-                max_new_tokens=50
-            )
-            load_time = time.time() - start_time
-            
-            # Create prompt for general model
-            prompt = f"Context: {context}\nQuestion: {question}\nAnswer:"
-            start_time = time.time()
-            result = gen_pipeline(prompt, return_full_text=False)
-            inference_time = time.time() - start_time
+            except (ValueError, OSError):
+                # Fallback: Try as text generation model (for general models like Qwen)
+                # This shows why explicit QA models are better - they work directly!
+                gen_pipeline = pipeline(
+                    "text-generation",
+                    model=model_id,
+                    token=hf_token,
+                    max_new_tokens=50
+                )
+                load_time = time.time() - start_time
+                
+                # Create prompt for general model
+                prompt = f"Context: {context}\nQuestion: {question}\nAnswer:"
+                start_time = time.time()
+                result = gen_pipeline(prompt, return_full_text=False)
+                inference_time = time.time() - start_time
             
             answer = result[0]["generated_text"].strip()
             
@@ -952,7 +969,12 @@ def rank_qa_models(
     print("   2. Confidence Scores: Model certainty (0.0 to 1.0)")
     print("   3. Answer Quality: Correctness and helpfulness")
     print("   4. Composite Score: Balanced performance metric")
-    print("\n   This may take several minutes...\n")
+    print("\n💡 What You'll See:")
+    print("   - Each model will be tested on 3 sample questions")
+    print("   - Results show average confidence score and speed")
+    print("   - Models are ranked by composite performance")
+    print("   - Note: Model loading may take time (first time only)")
+    print("\n   ⏳ This may take several minutes...\n")
     
     # Use test questions if provided, otherwise use Q&A database
     if test_questions is None:
@@ -964,19 +986,24 @@ def rank_qa_models(
     model_results = []
     
     for i, model_id in enumerate(QA_MODELS, 1):
-        print(f"   [{i}/{len(QA_MODELS)}] Testing {model_id}...")
+        # Show progress with clear formatting
+        model_name = model_id.split("/")[-1] if "/" in model_id else model_id
+        print(f"   [{i}/{len(QA_MODELS)}] Testing {model_name}...", end=" ", flush=True)
         
         # Test on multiple questions for better evaluation
         scores = []
         times = []
         answers = []
         
-        for question in test_questions[:3]:  # Test on 3 questions for average
-            result = evaluate_qa_model(model_id, question, context, hf_token)
-            if result["success"]:
-                scores.append(result["score"])
-                times.append(result["inference_time"])
-                answers.append(result["answer"])
+        # Suppress output during model evaluation
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            for question in test_questions[:3]:  # Test on 3 questions for average
+                result = evaluate_qa_model(model_id, question, context, hf_token)
+                if result["success"]:
+                    scores.append(result["score"])
+                    times.append(result["inference_time"])
+                    answers.append(result["answer"])
         
         if scores:
             avg_score = sum(scores) / len(scores)
@@ -1003,10 +1030,11 @@ def rank_qa_models(
         
         model_results.append(result)
         
+        # Show result on same line
         if result["success"]:
-            print(f"      ✅ Avg Score: {result['score']:.3f}, Avg Time: {result['inference_time']:.2f}s (tested {result.get('num_tests', 0)} questions)")
+            print(f"✅ Score: {result['score']:.3f} | Time: {result['inference_time']:.2f}s")
         else:
-            print(f"      ❌ Failed: {result.get('error', 'Unknown error')}")
+            print(f"❌ Failed")
         print()
     
     # Rank models by composite score (score * 0.6 + speed_score * 0.4)
@@ -1114,6 +1142,11 @@ def main() -> None:
     """Main orchestration function."""
     print("=" * 60)
     print("RAG System Exercise - Building a Complete RAG System")
+    print("=" * 60)
+    print("\n💡 For Students:")
+    print("   This script will guide you through building a complete RAG system.")
+    print("   You'll see progress for each step, and warnings are suppressed for clarity.")
+    print("   Focus on understanding the results and model comparisons!\n")
     print("=" * 60)
     print()
     
