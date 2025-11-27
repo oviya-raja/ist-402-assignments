@@ -950,53 +950,36 @@ def rank_qa_models(
     # Rank models by confidence score (primary) and speed (secondary)
     model_results.sort(key=lambda x: (x.get("score", 0.0), -x.get("inference_time", float('inf'))), reverse=True)
     
-    # Print ranking with educational explanations
+    # Print ranking as a table
     print("=" * 60)
-    print("📊 Model Ranking (Best to Worst)")
+    print("📊 Model Ranking - Review and Choose the Best Model for Your Use Case")
     print("=" * 60)
-    print("\n💡 Understanding the Results:")
-    print("   - Confidence Score: How sure the model is (0.0 = unsure, 1.0 = very sure)")
-    print("   - Inference Time: How fast it responds (lower is better)")
-    print("   - Model Type: 'explicit_qa' = QA-specific, 'general' = general purpose")
     print()
+    print(f"{'Rank':<6} {'Model':<50} {'Type':<15} {'Confidence':<12} {'Speed (s)':<12}")
+    print("-" * 100)
     
     for i, result in enumerate(model_results, 1):
-        print(f"   {i}. {result['model_id']}")
+        model_name = result['model_id'].split('/')[-1] if '/' in result['model_id'] else result['model_id']
+        if len(model_name) > 48:
+            model_name = model_name[:45] + "..."
+        
         if result["success"]:
             model_type = result.get("model_type", "unknown")
-            type_emoji = "✅" if model_type == "explicit_qa" else "⚠️"
-            type_label = "QA-Specific" if model_type == "explicit_qa" else "General Model"
-            
-            print(f"      Type: {type_emoji} {type_label}")
-            print(f"      Confidence Score: {result['score']:.3f}")
-            print(f"      Inference Time: {result['inference_time']:.2f}s")
-            
-            # Educational note
-            if model_type == "general":
-                print(f"      💡 Note: General models don't provide confidence scores!")
+            type_label = "QA-Specific" if model_type == "explicit_qa" else "General"
+            confidence = f"{result['score']:.3f}"
+            speed = f"{result['inference_time']:.3f}"
         else:
-            print(f"      ❌ Failed to load/run: {result.get('error', 'Unknown error')}")
-        print()
+            type_label = "Failed"
+            confidence = "N/A"
+            speed = "N/A"
+        
+        print(f"{i:<6} {model_name:<50} {type_label:<15} {confidence:<12} {speed:<12}")
     
-    # Summary insights
-    print("=" * 60)
-    print("📚 Key Takeaways:")
-    print("=" * 60)
-    explicit_qa_count = sum(1 for r in model_results if r.get("model_type") == "explicit_qa" and r["success"])
-    general_count = sum(1 for r in model_results if r.get("model_type") == "general" and r["success"])
-    
-    print(f"\n✅ Explicit QA Models: {explicit_qa_count}")
-    print("   - Provide confidence scores")
-    print("   - Faster inference")
-    print("   - Better for production QA systems")
-    
-    if general_count > 0:
-        print(f"\n⚠️  General Models: {general_count}")
-        print("   - No confidence scores")
-        print("   - Slower inference")
-        print("   - Better for creative tasks, not QA")
-    
-    print("\n💡 Lesson: Use explicit QA models for question-answering tasks!")
+    print("-" * 100)
+    print("\n💡 Understanding the Results:")
+    print("   - Confidence Score: How sure the model is (0.0 = unsure, 1.0 = very sure)")
+    print("   - Speed: Lower is better (response time in seconds)")
+    print("   - Model Type: QA-Specific models are optimized for question-answering")
     print("=" * 60)
     print()
     
@@ -1011,11 +994,6 @@ def main() -> None:
     """Main orchestration function."""
     print("=" * 60)
     print("RAG System Exercise - Building a Complete RAG System")
-    print("=" * 60)
-    print("\n💡 For Students:")
-    print("   This script will guide you through building a complete RAG system.")
-    print("   You'll see progress for each step, and warnings are suppressed for clarity.")
-    print("   Focus on understanding the results and model comparisons!\n")
     print("=" * 60)
     print()
     
@@ -1087,11 +1065,6 @@ def main() -> None:
         print("=" * 60)
         print("✅ RAG System Exercise Completed!")
         print("=" * 60)
-        print("\n💡 Next Steps:")
-        print("   1. Review the model rankings and choose the best model for your use case")
-        print("   2. Adjust the similarity threshold if needed")
-        print("   3. Expand your Q&A database with more examples")
-        print("   4. Test with real user questions")
         print()
     
     except KeyboardInterrupt:
