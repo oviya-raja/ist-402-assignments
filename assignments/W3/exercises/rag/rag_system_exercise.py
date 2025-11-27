@@ -890,16 +890,16 @@ def evaluate_qa_model(
                 start_time = time.time()
                 result = qa_pipeline(question=question, context=context)
                 inference_time = time.time() - start_time
-            
-            return {
-                "model_id": model_id,
-                "answer": result.get("answer", ""),
-                "score": result.get("score", 0.0),  # Confidence score (QA models provide this!)
-                "load_time": load_time,
-                "inference_time": inference_time,
-                "success": True,
-                "model_type": "explicit_qa"  # Explicit QA model
-            }
+                
+                return {
+                    "model_id": model_id,
+                    "answer": result.get("answer", ""),
+                    "score": result.get("score", 0.0),  # Confidence score (QA models provide this!)
+                    "load_time": load_time,
+                    "inference_time": inference_time,
+                    "success": True,
+                    "model_type": "explicit_qa"  # Explicit QA model
+                }
             except (ValueError, OSError):
                 # Fallback: Try as text generation model (for general models like Qwen)
                 # This shows why explicit QA models are better - they work directly!
@@ -916,18 +916,18 @@ def evaluate_qa_model(
                 start_time = time.time()
                 result = gen_pipeline(prompt, return_full_text=False)
                 inference_time = time.time() - start_time
-            
-            answer = result[0]["generated_text"].strip()
-            
-            return {
-                "model_id": model_id,
-                "answer": answer,
-                "score": 0.5,  # No confidence score available (general model limitation)
-                "load_time": load_time,
-                "inference_time": inference_time,
-                "success": True,
-                "model_type": "general"  # General model (not QA-specific)
-            }
+                
+                answer = result[0]["generated_text"].strip()
+                
+                return {
+                    "model_id": model_id,
+                    "answer": answer,
+                    "score": 0.5,  # No confidence score available (general model limitation)
+                    "load_time": load_time,
+                    "inference_time": inference_time,
+                    "success": True,
+                    "model_type": "general"  # General model (not QA-specific)
+                }
     except Exception as e:
         return {
             "model_id": model_id,
