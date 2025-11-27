@@ -48,9 +48,22 @@ try:
     
     # Suppress transformers library warnings
     transformers_logging.set_verbosity_error()
-except ImportError:
-    print("❌ Required packages not installed!")
-    print("   Install with: pip install transformers torch sentence-transformers faiss-cpu")
+except (ImportError, RuntimeError) as e:
+    error_msg = str(e)
+    if "register_fake" in error_msg or "torch.library" in error_msg:
+        print("❌ Dependency version mismatch detected!")
+        print("\n🔧 Fix: Update PyTorch and torchvision to compatible versions:")
+        print("   pip install --upgrade torch torchvision")
+        print("\n   Or install specific compatible versions:")
+        print("   pip install torch>=2.0.0 torchvision>=0.15.0")
+        print("\n💡 This error occurs when torchvision requires features not in your current torch version.")
+    elif "transformers" in error_msg.lower() or "ImportError" in str(type(e)):
+        print("❌ Required packages not installed!")
+        print("   Install with: pip install transformers torch sentence-transformers faiss-cpu")
+    else:
+        print(f"❌ Error importing required libraries: {error_msg}")
+        print("\n🔧 Try updating packages:")
+        print("   pip install --upgrade transformers torch torchvision sentence-transformers faiss-cpu")
     sys.exit(1)
 
 
