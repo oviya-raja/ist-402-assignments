@@ -1,5 +1,7 @@
 # Class Exercise: Building a RAG System with Mistral
 
+> **Note:** This is an exercise guide with instructions. For a working implementation, see `rag_system_exercise.py` in the same directory.
+
 ## Step 1: Create an Agentic/Assistant System Prompt
 
 Choose a specific business context and create a system prompt that gives Mistral a professional role. This system prompt will define how the AI behaves and what expertise it has.
