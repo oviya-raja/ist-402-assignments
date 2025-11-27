@@ -58,6 +58,7 @@ QA_MODELS = [
     # Add 2 more models of your choice
     "distilbert-base-uncased-distilled-squad",
     "mrm8488/bert-tiny-finetuned-squadv2",
+    "Qwen/Qwen2.5-0.5B-Instruct",  # Qwen3 series model for QA
 ]
 
 SIMILARITY_THRESHOLD = 0.7  # Threshold for determining if question is answerable
