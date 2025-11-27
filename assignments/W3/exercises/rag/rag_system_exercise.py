@@ -1039,8 +1039,9 @@ def main() -> None:
         additional_answerable = generate_test_questions(chatbot, system_prompt, "answerable", BUSINESS_NAME)
         
         # Combine: use generated answerable + additional answerable as test set
-        answerable = answerable_qa[:5] + additional_answerable[:2]  # 5 from knowledge base + 2 new = 7 total
-        unanswerable = unanswerable_qa[:7]  # Use 7 unanswerable from Step 2
+        # Extract questions from dicts and combine with additional answerable questions (strings)
+        answerable = [qa["question"] for qa in answerable_qa[:5]] + additional_answerable[:2]  # 5 from knowledge base + 2 new = 7 total
+        unanswerable = [qa["question"] for qa in unanswerable_qa[:7]]  # Use 7 unanswerable from Step 2
         
         print(f"   Answerable test questions: {len(answerable)}")
         print(f"   Unanswerable test questions: {len(unanswerable)}")
